@@ -1,166 +1,93 @@
 
-const pages = document.querySelectorAll(".page");
-const navLinks = document.querySelectorAll(".nav-link");
-const sidebar = document.getElementById("sidebar");
-const pageName = document.getElementById("pageName");
-const toast = document.getElementById("toast");
+// =====================================
+// AADARSH HUB - SUPABASE CONNECTION
+// =====================================
 
-const privatePages = [
-    "attendance",
-    "calendar",
-    "documents",
-    "music",
-    "notes"
-];
+const SUPABASE_URL = "sb_secret_h9FnW1ihCXxm6G5oqPrkJQ_pAgC0xbx";
+const SUPABASE_KEY = "sb_publishable_sloNZpolPF-7mv0i0kxErQ_iPf3jKmk";
 
-function showPage(page) {
+const supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+);
 
-    pages.forEach(section => {
-        section.classList.remove("active");
+let selectedLogin = "";
+
+function openLogin(type) {
+    selectedLogin = type;
+
+    document.getElementById("login-title").textContent =
+        type === "owner" ? "Owner Login" : "Member Login";
+
+    document.getElementById("login-panel").classList.remove("hidden");
+    document.getElementById("login-message").textContent = "";
+
+    document.getElementById("username").value = "";
+    document.getElementById("password").value = "";
+
+    document.getElementById("username").type = "email";
+    document.querySelector('label[for="username"]')?.remove();
+
+    document.getElementById("username").placeholder = "Enter registered email";
+
+    document.getElementById("login-panel").scrollIntoView({
+        behavior: "smooth",
+        block: "center"
     });
-
-    navLinks.forEach(link => {
-        link.classList.remove("active");
-    });
-
-    const target = document.getElementById(page);
-
-    if (target) {
-        target.classList.add("active");
-    } else if (privatePages.includes(page)) {
-        document.getElementById("lockedPage").classList.add("active");
-
-        const title = page.charAt(0).toUpperCase() + page.slice(1);
-
-        document.getElementById("lockedTitle").textContent = title;
-    }
-
-    const selectedLink = document.querySelector(
-        `.nav-link[data-page="${page}"]`
-    );
-
-    if (selectedLink) {
-        selectedLink.classList.add("active");
-    }
-
-    pageName.textContent =
-        page.charAt(0).toUpperCase() + page.slice(1);
-
-    sidebar.classList.remove("open");
-
-    window.location.hash = page;
 }
 
-function showToast(message) {
-
-    toast.textContent = message;
-    toast.classList.add("show");
-
-    clearTimeout(window.toastTimer);
-
-    window.toastTimer = setTimeout(() => {
-        toast.classList.remove("show");
-    }, 2500);
+function closeLogin() {
+    document.getElementById("login-panel").classList.add("hidden");
 }
 
-// Sidebar navigation
+async function handleLogin(event) {
+    event.preventDefault();
 
-navLinks.forEach(link => {
+    const email = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value;
+    const message = document.getElementById("login-message");
 
-    link.addEventListener("click", function(event) {
+    message.textContent = "Signing in...";
 
-        event.preventDefault();
+    const { data, error } =
+        await supabaseClient.auth.signInWithPassword({
+            email: email,
+            password: password
+        });
 
-        const page = this.dataset.page;
+    if (error) {
+        message.textContent = error.message;
+        return;
+    }
 
-        showPage(page);
-    });
+    const { data: profile, error: profileError } =
+        await supabaseClient
+            .from("profiles")
+            .select("username, role")
+            .eq("id", data.user.id)
+            .single();
 
-});
-
-// Public page buttons
-
-document.querySelectorAll("[data-open]").forEach(button => {
-
-    button.addEventListener("click", function() {
-
-        showPage(this.dataset.open);
-
-    });
-
-});
-
-// Locked tools
-
-document.querySelectorAll(".tool-btn").forEach(button => {
-
-    button.addEventListener("click", function() {
-
-        const card = this.closest(".tool-card");
-
-        const tool = card.dataset.tool;
-
-        showToast(tool + " is coming soon!");
-
-    });
-
-});
-
-// Mobile menu
-
-document.getElementById("menuBtn").addEventListener("click", () => {
-
-    sidebar.classList.toggle("open");
-
-});
-
-// Close menu when clicking outside
-
-document.addEventListener("click", function(event) {
-
-    const menuButton = document.getElementById("menuBtn");
+    if (profileError || !profile) {
+        await supabaseClient.auth.signOut();
+        message.textContent = "Account profile not found.";
+        return;
+    }
 
     if (
-        window.innerWidth <= 850 &&
-        sidebar.classList.contains("open") &&
-        !sidebar.contains(event.target) &&
-        !menuButton.contains(event.target)
+        (selectedLogin === "owner" && profile.role !== "owner") ||
+        (selectedLogin === "member" && profile.role !== "member")
     ) {
-        sidebar.classList.remove("open");
+        await supabaseClient.auth.signOut();
+        message.textContent = "You are not authorized for this login.";
+        return;
     }
 
-});
+    message.style.color = "#8be0a5";
+    message.textContent =
+        "Welcome, " + profile.username + "! Login successful.";
 
-// Browser back and forward navigation
+    console.log("Authenticated user:", profile.username);
+    console.log("Role:", profile.role);
 
-window.addEventListener("hashchange", () => {
-
-    const page = window.location.hash.substring(1);
-
-    const validPages = [
-        "home",
-        "about",
-        "projects",
-        "friends",
-        ...privatePages
-    ];
-
-    if (validPages.includes(page)) {
-        showPage(page);
-    }
-
-});
-
-// Load requested page
-
-const initialPage = window.location.hash.substrin g(1);
-
-const validPages = [
-    "home",
-    "about",
-    "projects",
-    "friends",
-    ...privatePages
-];
-
-showPage(validPages.includes(initialPage) ? initialPage : "home");
+    // Next step: Open the private dashboard.
+}
