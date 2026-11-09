@@ -1,28 +1,241 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
-    <meta charset="UTF-8">
-    <title>Aadarsh Hub</title>
-    <link rel="stylesheet" href="style.css">
-    <!-- Supabase JS CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hamara Adda</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0e1020;--ac:#5ee7df;--tx:#eef0ff;--mu:#9aa0c8;--card:rgba(24,27,52,.72);--bd:rgba(255,255,255,.1)}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--tx);font:16px/1.5 'Bricolage Grotesque',system-ui,sans-serif;transition:background .4s}
+canvas{position:fixed;inset:0;width:100%;height:100%;z-index:0}
+.wrap{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:16px}
+body.phone .wrap{max-width:430px}
+.card{background:var(--card);backdrop-filter:blur(10px);border:1px solid var(--bd);border-radius:18px;padding:16px;margin-bottom:14px}
+h1,h2,h3{margin:0 0 8px;font-weight:800}
+h1{font-size:2.2rem}
+.mu{color:var(--mu)}
+button,input,select{font:inherit;color:var(--tx)}
+input{background:rgba(255,255,255,.07);border:1px solid var(--bd);border-radius:12px;padding:10px 12px;width:100%}
+input:focus,button:focus-visible{outline:2px solid var(--ac)}
+button{background:rgba(255,255,255,.09);border:1px solid var(--bd);border-radius:12px;padding:9px 14px;cursor:pointer}
+button.pri{background:var(--ac);color:#06121a;font-weight:800;border:0}
+button.sm{padding:5px 10px;font-size:.85rem}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:14px}
+.hero{text-align:center;padding-top:6vh}
+.logo{font-size:5rem;margin:18px 0;filter:drop-shadow(0 0 24px var(--ac))}
+.logo img{height:96px;border-radius:50%}
+.hide{display:none!important}
+.tabs{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto}
+.tabs button.on{background:var(--ac);color:#06121a;font-weight:800}
+.grid{display:grid;grid-template-columns:1fr 2fr;gap:14px}
+body.phone .grid,.narrow .grid{grid-template-columns:1fr}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#4ade80;margin-right:8px}
+#chat{height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.msg{background:rgba(255,255,255,.07);border-radius:12px;padding:6px 10px;max-width:85%;align-self:flex-start;word-break:break-word}
+.msg.me{align-self:flex-end;background:color-mix(in srgb,var(--ac) 25%,transparent)}
+.msg b{font-size:.75rem;color:var(--mu);display:block}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row>input{flex:1;min-width:120px}
+.bar{height:8px;background:rgba(255,255,255,.1);border-radius:8px;overflow:hidden;margin:8px 0}
+.bar i{display:block;height:100%;background:var(--ac)}
+.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.g div{position:relative}
+.g img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px}
+.g button{position:absolute;top:4px;right:4px}
+.li{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd);flex-wrap:wrap}
+.li input[type=number]{width:70px}
+.li input[type=checkbox]{width:auto}
+.modal{position:fixed;inset:0;z-index:5;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px}
+.modal .card{width:100%;max-width:380px}
+.err{color:#ff8a8a;min-height:1.4em}
+@media(max-width:700px){.grid{grid-template-columns:1fr}h1{font-size:1.8rem}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
 </head>
 <body>
-    <div class="homepage-container">
-        <h1>Aadarsh Hub</h1>
-        <p>Founder & Developer: <strong>Aadarsh Prajapati</strong></p>
-        
-        <div class="login-section">
-            <input type="email" id="email" placeholder="Email">
-            <input type="password" id="password" placeholder="Password">
-            
-            <div class="buttons">
-                <!-- Dono buttons same login function call karenge, role database se check hoga -->
-                <button onclick="loginUser()">Owner Login</button>
-                <button onclick="loginUser()">Member Login</button>
-            </div>
-        </div>
-    </div>
-    <script src="app.js"></script>
+<canvas id="bg"></canvas>
+<div class="wrap">
+ <div class="top">
+  <b id="brand">🌌 Hamara Adda</b>
+  <span class="row"><button class="sm" id="devBtn" title="Phone / Web view badlo">📱 Phone view</button><button class="sm hide" id="outBtn">Logout</button></span>
+ </div>
+
+ <section id="landing" class="hero">
+  <div class="card"><h1 id="oName">…</h1><p class="mu" id="oInfo"></p></div>
+  <div class="logo" id="logo">🌌</div>
+  <button class="pri" id="loginBtn">Log in</button>
+ </section>
+
+ <section id="app" class="hide">
+  <div class="tabs" id="tabs"></div>
+  <div id="t-home">
+   <div class="grid">
+    <div class="card"><h3>Abhi online</h3><div id="online" class="mu"></div></div>
+    <div class="card"><h3>Live chat</h3><div id="chat"></div>
+     <div class="row"><input id="msgIn" placeholder="Message likho…" maxlength="500"><button class="pri" id="sendBtn">Bhejo</button></div></div>
+   </div>
+  </div>
+  <div id="t-files" class="hide card"><h3>Meri files</h3>
+   <div class="mu" id="quotaTxt"></div><div class="bar"><i id="quotaBar" style="width:0"></i></div>
+   <input type="file" id="fileIn" multiple><div id="fileList"></div></div>
+  <div id="t-gallery" class="hide card"><h3>Common gallery</h3>
+   <div id="gUp" class="hide"><input type="file" id="gIn" accept="image/*" multiple></div><div class="g" id="gal"></div></div>
+  <div id="t-set" class="hide">
+   <div class="card"><h3>Theme</h3><div class="row"><label>Accent <input type="color" id="thAc"></label><label>Background <input type="color" id="thBg"></label><button class="pri" id="thSave">Save theme</button></div></div>
+   <div class="card ownerOnly"><h3>Owner details (landing page)</h3>
+    <div class="row"><input id="sName" placeholder="Naam"><input id="sLogo" placeholder="Logo: emoji ya image URL"></div>
+    <div class="row" style="margin-top:8px"><input id="sInfo" placeholder="Details / contact"><button class="pri" id="infoSave">Save</button></div></div>
+  </div>
+  <div id="t-mem" class="hide">
+   <div class="card"><h3>Naya member banao</h3>
+    <div class="row"><input id="nmU" placeholder="Username" autocapitalize="none"><input id="nmP" type="password" placeholder="Password (min 6)"><button class="pri" id="nmBtn">Banao</button></div><div class="err" id="nmErr"></div></div>
+   <div class="card"><h3>Members</h3><div id="memList"></div></div>
+  </div>
+ </section>
+</div>
+
+<div class="modal hide" id="modal"><div class="card">
+ <div class="tabs"><button id="mTab" class="on">Member login</button><button id="oTab">Owner login</button></div>
+ <div class="row" style="flex-direction:column;align-items:stretch">
+  <input id="lu" placeholder="Username" autocapitalize="none" autocomplete="username">
+  <input id="lp" type="password" placeholder="Password" autocomplete="current-password">
+  <div class="err" id="lerr"></div>
+  <button class="pri" id="goBtn">Andar jao</button>
+  <button class="sm hide" id="firstBtn">Pehli baar? Owner account banao</button>
+  <button class="sm" id="closeBtn">Band karo</button>
+ </div></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+/* ====== SIRF YE 2 LINES BADLO (Supabase > Project Settings > API) ====== */
+const SB_URL='https://YOUR-PROJECT.supabase.co';
+const SB_KEY='YOUR-ANON-PUBLIC-KEY';
+/* ======================================================================= */
+const $=id=>document.getElementById(id), sb=supabase.createClient(SB_URL,SB_KEY);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const em=u=>u.trim().toLowerCase().replace(/[^a-z0-9._-]/g,'')+'@members.app';
+let me=null,role='member',ch=null,cfg={};
+
+/* ---------- Device switch ---------- */
+function setPhone(p){document.body.classList.toggle('phone',p);$('devBtn').textContent=p?'💻 Web view':'📱 Phone view';localStorage.setItem('phone',p?1:0)}
+setPhone(localStorage.getItem('phone')===null?innerWidth<700:localStorage.getItem('phone')==='1');
+$('devBtn').onclick=()=>setPhone(!document.body.classList.contains('phone'));
+
+/* ---------- Interactive background ---------- */
+(()=>{const c=$('bg'),x=c.getContext('2d');let w,h,P=[],m={x:-999,y:-999};
+const rs=()=>{w=c.width=innerWidth;h=c.height=innerHeight;P=Array.from({length:Math.min(90,w*h/14000|0)},()=>({x:Math.random()*w,y:Math.random()*h,vx:Math.random()-.5,vy:Math.random()-.5}))};
+addEventListener('resize',rs);rs();
+const mv=e=>{const t=e.touches?e.touches[0]:e;m.x=t.clientX;m.y=t.clientY};
+addEventListener('mousemove',mv);addEventListener('touchmove',mv,{passive:true});
+if(matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+(function f(){x.clearRect(0,0,w,h);const ac=getComputedStyle(document.documentElement).getPropertyValue('--ac')||'#5ee7df';
+P.forEach((p,i)=>{const dx=p.x-m.x,dy=p.y-m.y,d=Math.hypot(dx,dy);if(d<140){p.vx+=dx/d*.15;p.vy+=dy/d*.15}
+p.vx*=.98;p.vy*=.98;p.x+=p.vx+.1;p.y+=p.vy;if(p.x<0)p.x=w;if(p.x>w)p.x=0;if(p.y<0)p.y=h;if(p.y>h)p.y=0;
+x.fillStyle=ac;x.globalAlpha=.8;x.beginPath();x.arc(p.x,p.y,2,0,7);x.fill();
+for(let j=i+1;j<P.length;j++){const q=P[j],l=Math.hypot(p.x-q.x,p.y-q.y);if(l<110){x.strokeStyle=ac;x.globalAlpha=(1-l/110)*.35;x.beginPath();x.moveTo(p.x,p.y);x.lineTo(q.x,q.y);x.stroke()}}});
+requestAnimationFrame(f)})()})();
+
+/* ---------- Settings / theme ---------- */
+function applyCfg(){const r=document.documentElement.style;r.setProperty('--ac',cfg.accent||'#5ee7df');r.setProperty('--bg',cfg.bg||'#0e1020');
+$('oName').textContent=cfg.owner_name||'';$('oInfo').textContent=cfg.owner_info||'';
+const l=cfg.logo||'🌌',isU=/^https?:/.test(l);$('logo').innerHTML=isU?`<img src="${esc(l)}" alt="logo">`:esc(l);
+$('brand').textContent=(isU?'':l+' ')+(cfg.owner_name||'Hamara Adda');
+$('thAc').value=cfg.accent||'#5ee7df';$('thBg').value=cfg.bg||'#0e1020';$('sName').value=cfg.owner_name||'';$('sInfo').value=cfg.owner_info||'';$('sLogo').value=cfg.logo||''}
+async function loadCfg(){const{data}=await sb.from('settings').select('*');(data||[]).forEach(r=>cfg[r.key]=r.value);applyCfg()}
+async function saveCfg(o){for(const k in o){const{error}=await sb.from('settings').upsert({key:k,value:o[k]});if(error)return alert(error.message);cfg[k]=o[k]}applyCfg();alert('Save ho gaya ✅')}
+$('thSave').onclick=()=>saveCfg({accent:$('thAc').value,bg:$('thBg').value});
+$('infoSave').onclick=()=>saveCfg({owner_name:$('sName').value,owner_info:$('sInfo').value,logo:$('sLogo').value||'🌌'});
+
+/* ---------- Login ---------- */
+let want='member';
+$('loginBtn').onclick=()=>$('modal').classList.remove('hide');
+$('closeBtn').onclick=()=>$('modal').classList.add('hide');
+function tab(r){want=r;$('mTab').classList.toggle('on',r==='member');$('oTab').classList.toggle('on',r==='owner');$('firstBtn').classList.toggle('hide',r!=='owner');$('lerr').textContent=''}
+$('mTab').onclick=()=>tab('member');$('oTab').onclick=()=>tab('owner');
+$('goBtn').onclick=async()=>{$('lerr').textContent='';
+ const{error}=await sb.auth.signInWithPassword({email:em($('lu').value),password:$('lp').value});
+ if(error)return $('lerr').textContent='Username ya password galat hai.';
+ if(!await enter(want))await sb.auth.signOut()};
+$('firstBtn').onclick=async()=>{const{error}=await sb.auth.signUp({email:em($('lu').value),password:$('lp').value});
+ $('lerr').textContent=error?error.message:'Account ban gaya. Ab "Andar jao" dabao. (Sirf pehla account owner banta hai)'};
+$('outBtn').onclick=async()=>{await sb.auth.signOut();location.reload()};
+
+async function enter(expect){
+ const{data:{user}}=await sb.auth.getUser();if(!user)return false;
+ const{data:p}=await sb.from('profiles').select('*').eq('id',user.id).single();
+ if(!p)return false;
+ if(!p.enabled){$('lerr').textContent='Ye login disable hai. Owner se baat karo.';return false}
+ if(expect&&expect!==p.role){$('lerr').textContent=p.role==='owner'?'Ye owner account hai, Owner login use karo.':'Ye member account hai, Member login use karo.';return false}
+ me=p;role=p.role;
+ $('modal').classList.add('hide');$('landing').classList.add('hide');$('app').classList.remove('hide');$('outBtn').classList.remove('hide');
+ const own=role==='owner',T=[['home','🏠 Home'],['files','📁 Files'],['gallery','🖼 Gallery']];
+ if(own||p.can_theme)T.push(['set','🎨 Settings']);if(own)T.push(['mem','👥 Members']);
+ $('tabs').innerHTML=T.map(t=>`<button data-t="${t[0]}">${t[1]}</button>`).join('');
+ $('tabs').onclick=e=>{const t=e.target.dataset.t;if(!t)return;['home','files','gallery','set','mem'].forEach(k=>$('t-'+k).classList.toggle('hide',k!==t));
+  [...$('tabs').children].forEach(b=>b.classList.toggle('on',b.dataset.t===t));if(t==='files')loadFiles();if(t==='gallery')loadGal();if(t==='mem')loadMem()};
+ document.querySelectorAll('.ownerOnly').forEach(e=>e.classList.toggle('hide',!own));
+ $('gUp').classList.toggle('hide',!(own||p.can_gallery));
+ $('tabs').firstChild.click();startRealtime();return true}
+
+/* ---------- Online + Chat ---------- */
+async function startRealtime(){
+ ch=sb.channel('room',{config:{presence:{key:me.id}}});
+ ch.on('presence',{event:'sync'},()=>{const s=ch.presenceState();const n=Object.values(s).map(a=>a[0].name);
+  $('online').innerHTML=n.length?n.map(x=>`<div><span class="dot"></span>${esc(x)}</div>`).join(''):'Koi nahi';});
+ ch.on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},e=>addMsg(e.new));
+ ch.subscribe(async st=>{if(st==='SUBSCRIBED')await ch.track({name:me.username+(role==='owner'?' 👑':'')})});
+ const{data}=await sb.from('messages').select('*').order('id',{ascending:false}).limit(50);
+ $('chat').innerHTML='';(data||[]).reverse().forEach(addMsg)}
+function addMsg(m){const d=document.createElement('div');d.className='msg'+(m.uid===me.id?' me':'');d.innerHTML=`<b>${esc(m.username)}</b>${esc(m.body)}`;
+ const c=$('chat');c.appendChild(d);c.scrollTop=c.scrollHeight}
+async function send(){const b=$('msgIn').value.trim();if(!b)return;$('msgIn').value='';
+ const{error}=await sb.from('messages').insert({uid:me.id,username:me.username,body:b});if(error)alert(error.message)}
+$('sendBtn').onclick=send;$('msgIn').onkeydown=e=>{if(e.key==='Enter')send()};
+
+/* ---------- Private files (with quota) ---------- */
+async function loadFiles(){
+ const{data}=await sb.storage.from('files').list(me.id,{limit:200});const f=(data||[]).filter(x=>x.id);
+ const used=f.reduce((a,x)=>a+(x.metadata?.size||0),0),lim=me.quota_mb*1048576;
+ $('quotaTxt').textContent=`${(used/1048576).toFixed(1)} MB / ${me.quota_mb} MB use hua`;$('quotaBar').style.width=Math.min(100,used/lim*100)+'%';
+ $('fileList').innerHTML=f.map(x=>`<div class="li"><span>${esc(x.name)} <span class="mu">(${((x.metadata?.size||0)/1024).toFixed(0)} KB)</span></span><span class="row"><button class="sm" data-d="${esc(x.name)}">Download</button><button class="sm" data-x="${esc(x.name)}">Delete</button></span></div>`).join('')||'<p class="mu">Abhi koi file nahi. Upar se upload karo.</p>';
+ $('fileList').dataset.used=used}
+$('fileIn').onchange=async e=>{let used=+$('fileList').dataset.used||0;const lim=me.quota_mb*1048576;
+ for(const f of e.target.files){if(used+f.size>lim){alert(`"${f.name}" ke liye jagah nahi hai (limit ${me.quota_mb} MB).`);continue}
+  const{error}=await sb.storage.from('files').upload(`${me.id}/${f.name}`,f,{upsert:true});if(error)alert(error.message);else used+=f.size}
+ e.target.value='';loadFiles()};
+$('fileList').onclick=async e=>{const d=e.target.dataset;
+ if(d.d){const{data}=await sb.storage.from('files').createSignedUrl(`${me.id}/${d.d}`,60);open(data.signedUrl,'_blank')}
+ if(d.x&&confirm('Delete karna hai?')){await sb.storage.from('files').remove([`${me.id}/${d.x}`]);loadFiles()}};
+
+/* ---------- Common gallery ---------- */
+async function loadGal(){const{data}=await sb.storage.from('gallery').list('',{limit:200,sortBy:{column:'created_at',order:'desc'}});
+ const can=role==='owner'||me.can_gallery;
+ $('gal').innerHTML=(data||[]).filter(x=>x.id).map(x=>`<div><img loading="lazy" src="${sb.storage.from('gallery').getPublicUrl(x.name).data.publicUrl}" alt="">${can?`<button class="sm" data-x="${esc(x.name)}">✕</button>`:''}</div>`).join('')||'<p class="mu">Gallery khali hai.</p>'}
+$('gIn').onchange=async e=>{for(const f of e.target.files){const{error}=await sb.storage.from('gallery').upload(Date.now()+'_'+f.name.replace(/[^\w.-]/g,'_'),f);if(error)alert(error.message)}e.target.value='';loadGal()};
+$('gal').onclick=async e=>{const n=e.target.dataset.x;if(n&&confirm('Photo hatani hai?')){await sb.storage.from('gallery').remove([n]);loadGal()}};
+
+/* ---------- Owner: members ---------- */
+async function loadMem(){const{data}=await sb.from('profiles').select('*').order('username');
+ $('memList').innerHTML=(data||[]).filter(p=>p.role!=='owner').map(p=>`<div class="li" data-id="${p.id}"><b>${esc(p.username)}</b>
+  <span class="row"><label><input type="checkbox" data-k="enabled" ${p.enabled?'checked':''}> Enabled</label>
+  <label><input type="checkbox" data-k="can_gallery" ${p.can_gallery?'checked':''}> Gallery</label>
+  <label><input type="checkbox" data-k="can_theme" ${p.can_theme?'checked':''}> Theme</label>
+  <label>MB <input type="number" min="1" data-k="quota_mb" value="${p.quota_mb}"></label></span></div>`).join('')||'<p class="mu">Abhi koi member nahi.</p>'}
+$('memList').onchange=async e=>{const k=e.target.dataset.k,id=e.target.closest('.li').dataset.id;if(!k)return;
+ const v=e.target.type==='checkbox'?e.target.checked:+e.target.value;const{error}=await sb.from('profiles').update({[k]:v}).eq('id',id);if(error)alert(error.message)};
+$('nmBtn').onclick=async()=>{const u=$('nmU').value,pw=$('nmP').value;$('nmErr').textContent='';
+ if(!u||pw.length<6)return $('nmErr').textContent='Username aur 6+ character ka password do.';
+ const tmp=supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:false,autoRefreshToken:false,storageKey:'tmp'}});
+ const{data,error}=await tmp.auth.signUp({email:em(u),password:pw});if(error)return $('nmErr').textContent=error.message;
+ await sb.from('profiles').update({enabled:true}).eq('id',data.user.id);
+ $('nmU').value=$('nmP').value='';loadMem()};
+
+/* ---------- Boot ---------- */
+sb.channel('cfg').on('postgres_changes',{event:'*',schema:'public',table:'settings'},loadCfg).subscribe();
+loadCfg().then(async()=>{const{data:{session}}=await sb.auth.getSession();if(session&&!await enter())await sb.auth.signOut()});
+</script>
 </body>
 </html>
