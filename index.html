@@ -1,0 +1,315 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080914">
+  <title>Aadarsh Hub — Private Space</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <div class="ambient ambient-one"></div>
+  <div class="ambient ambient-two"></div>
+  <canvas id="particles" aria-hidden="true"></canvas>
+  <div id="toast" class="toast" role="status"></div>
+
+  <main id="landing" class="landing page">
+    <nav class="topbar">
+      <a class="brand" href="#">
+        <span class="brand-mark">AH</span>
+        <span>AADARSH<span class="brand-light"> HUB</span></span>
+      </a>
+      <span class="top-status"><i></i> PRIVATE COMMUNITY</span>
+    </nav>
+
+    <section class="hero">
+      <div class="eyebrow">
+        <span class="eyebrow-line"></span>
+        YOUR SPACE. YOUR PEOPLE.
+      </div>
+      <div class="hero-logo">A<span>H</span></div>
+      <h1>One hub.<br><span>Our universe.</span></h1>
+      <p class="hero-copy">
+        A private digital space to connect, share and keep your circle close.
+      </p>
+
+      <div class="owner-card">
+        <div class="avatar avatar-large">AP</div>
+        <div>
+          <small>FOUNDED & MANAGED BY</small>
+          <strong>Aadarsh Prajapati</strong>
+          <span>Owner · Aadarsh Hub</span>
+        </div>
+        <span class="owner-check">?</span>
+      </div>
+
+      <button id="open-login" class="primary-btn hero-btn">
+        Enter the Hub <span>?</span>
+      </button>
+
+      <div class="hero-foot">
+        <span>PRIVATE BY DESIGN</span>
+        <span>EST. 2026</span>
+        <span>BUILT FOR THE CIRCLE</span>
+      </div>
+    </section>
+  </main>
+
+  <section id="auth-view" class="auth-view page hidden">
+    <button class="back-btn" id="back-home">? Back</button>
+    <div class="auth-card glass">
+      <div class="auth-brand">
+        <span class="brand-mark">AH</span>
+        <div>
+          <b>AADARSH HUB</b>
+          <small>MEMBER ACCESS</small>
+        </div>
+      </div>
+
+      <h2>Welcome <span>back.</span></h2>
+      <p class="muted">Sign in to enter your private space.</p>
+
+      <div class="segmented">
+        <button class="active" data-role="member">Member Login</button>
+        <button data-role="owner">Owner Login</button>
+      </div>
+
+      <form id="login-form">
+        <label for="login-email">Email address</label>
+        <input id="login-email" type="email"
+          autocomplete="username" placeholder="you@example.com" required>
+
+        <label for="login-password">Password</label>
+        <input id="login-password" type="password"
+          autocomplete="current-password" placeholder="Your password" required>
+
+        <button class="primary-btn full" type="submit">
+          Sign in <span>?</span>
+        </button>
+      </form>
+
+      <p class="tiny-note">
+        Accounts are created by the Hub owner. Public sign-up is disabled.
+      </p>
+    </div>
+  </section>
+
+  <section id="app-view" class="app-view page hidden">
+    <aside id="sidebar" class="sidebar glass">
+      <a class="brand side-brand" href="#">
+        <span class="brand-mark">AH</span>
+        <span>AADARSH<span class="brand-light"> HUB</span></span>
+      </a>
+
+      <div class="side-user">
+        <div id="side-avatar" class="avatar">A</div>
+        <div>
+          <b id="side-name">Member</b>
+          <small id="side-role">MEMBER</small>
+        </div>
+      </div>
+
+      <div class="nav-label">WORKSPACE</div>
+      <button class="nav-item active" data-panel="overview">? <span>Overview</span></button>
+      <button class="nav-item" data-panel="chat">? <span>Group chat</span></button>
+      <button class="nav-item" data-panel="files">? <span>My files</span></button>
+      <button class="nav-item" data-panel="gallery">? <span>Common gallery</span></button>
+
+      <div id="owner-nav" class="hidden">
+        <div class="nav-label">OWNER TOOLS</div>
+        <button class="nav-item" data-panel="members">? <span>Members</span></button>
+      </div>
+
+      <div class="sidebar-bottom">
+        <div class="online-indicator">
+          <i></i> <span id="online-count">1 online</span>
+        </div>
+        <button id="logout" class="logout-btn">? Sign out</button>
+      </div>
+    </aside>
+
+    <div class="main-area">
+      <header class="app-header">
+        <div>
+          <div class="crumb">
+            AADARSH HUB <span>/</span> <b id="current-crumb">OVERVIEW</b>
+          </div>
+          <h1 id="page-title">Your space.</h1>
+        </div>
+        <div class="header-right">
+          <span class="live-pill"><i></i> LIVE</span>
+          <button id="mobile-menu" class="mobile-menu">?</button>
+          <div id="header-avatar" class="avatar">A</div>
+        </div>
+      </header>
+
+      <div class="content">
+        <section id="panel-overview" class="panel">
+          <div class="welcome-banner">
+            <div>
+              <div class="eyebrow">YOUR PRIVATE SPACE</div>
+              <h2>Good to see you,<br><span id="welcome-name">friend</span>.</h2>
+              <p>Your circle is right here. Make yourself at home.</p>
+            </div>
+            <div class="banner-orbit">
+              <div class="orbit-ring"></div>
+              <div class="orbit-core">AH</div>
+            </div>
+          </div>
+
+          <div class="stat-grid">
+            <article class="stat-card glass">
+              <span class="stat-icon">?</span>
+              <small>YOUR ROLE</small>
+              <strong id="stat-role">MEMBER</strong>
+              <span class="stat-sub">Inside the circle</span>
+            </article>
+            <article class="stat-card glass">
+              <span class="stat-icon">?</span>
+              <small>PEOPLE ONLINE</small>
+              <strong id="stat-online">1</strong>
+              <span class="stat-sub">Connected right now</span>
+            </article>
+            <article class="stat-card glass">
+              <span class="stat-icon">?</span>
+              <small>YOUR FILE SPACE</small>
+              <strong id="stat-storage">—</strong>
+              <span class="stat-sub" id="storage-sub">Personal storage</span>
+            </article>
+          </div>
+
+          <div class="section-heading">
+            <div><small>JUMP BACK IN</small><h3>Quick access</h3></div>
+          </div>
+
+          <div class="quick-grid">
+            <button class="quick-card glass" data-go="chat">
+              <span>?</span><b>Group chat</b>
+              <small>Talk with everyone</small><em>?</em>
+            </button>
+            <button class="quick-card glass" data-go="files">
+              <span>?</span><b>My files</b>
+              <small>Your personal locker</small><em>?</em>
+            </button>
+            <button class="quick-card glass" data-go="gallery">
+              <span>?</span><b>Common gallery</b>
+              <small>Shared memories</small><em>?</em>
+            </button>
+          </div>
+        </section>
+
+        <section id="panel-chat" class="panel hidden">
+          <div class="section-heading">
+            <div>
+              <small>THE COMMON ROOM</small>
+              <h3>Group chat</h3>
+              <p class="muted">Messages appear live for active members.</p>
+            </div>
+          </div>
+          <div class="chat-shell glass">
+            <div class="chat-top">
+              <span><i class="online-dot"></i> Hub conversation</span>
+              <small>REALTIME</small>
+            </div>
+            <div id="chat-messages" class="chat-messages">
+              <div class="empty-state">Loading conversation…</div>
+            </div>
+            <form id="chat-form" class="chat-compose">
+              <input id="chat-input" maxlength="4000"
+                placeholder="Write something to the group…" autocomplete="off">
+              <button type="submit" aria-label="Send message">?</button>
+            </form>
+          </div>
+        </section>
+
+        <section id="panel-files" class="panel hidden">
+          <div class="section-heading">
+            <div>
+              <small>YOUR PRIVATE LOCKER</small>
+              <h3>My files</h3>
+              <p class="muted">Only you can access files in your personal folder.</p>
+            </div>
+            <label class="primary-btn upload-label">
+              + Upload file
+              <input id="file-upload" type="file" hidden>
+            </label>
+          </div>
+          <div class="storage-banner glass">
+            <span>?</span>
+            <div>
+              <b>Personal storage</b>
+              <small id="quota-text">Checking your storage allowance…</small>
+              <div class="progress"><i id="quota-progress"></i></div>
+            </div>
+          </div>
+          <div id="my-files" class="file-list glass">
+            <div class="empty-state">Loading your files…</div>
+          </div>
+        </section>
+
+        <section id="panel-gallery" class="panel hidden">
+          <div class="section-heading">
+            <div>
+              <small>SHARED WITH THE CIRCLE</small>
+              <h3>Common gallery</h3>
+              <p class="muted">Photos and videos shared by members.</p>
+            </div>
+            <label id="gallery-upload-wrap" class="primary-btn upload-label hidden">
+              + Share media
+              <input id="gallery-upload" type="file" accept="image/*,video/*" hidden>
+            </label>
+          </div>
+          <div id="gallery-grid" class="gallery-grid">
+            <div class="empty-state">Loading gallery…</div>
+          </div>
+        </section>
+
+        <section id="panel-members" class="panel hidden">
+          <div class="section-heading">
+            <div>
+              <small>CONTROL CENTRE</small>
+              <h3>Manage members</h3>
+              <p class="muted">Create accounts and manage access to your hub.</p>
+            </div>
+            <button id="show-create-member" class="primary-btn">+ Create member</button>
+          </div>
+
+          <form id="create-member-form" class="create-form glass hidden">
+            <div class="form-title">
+              <b>Create a member account</b>
+              <button type="button" id="hide-create-member" class="icon-btn">?</button>
+            </div>
+            <div class="form-grid">
+              <div>
+                <label>Display name</label>
+                <input id="new-name" maxlength="60" required placeholder="Member name">
+              </div>
+              <div>
+                <label>Email</label>
+                <input id="new-email" type="email" required placeholder="member@email.com">
+              </div>
+              <div>
+                <label>Temporary password</label>
+                <input id="new-password" type="password" minlength="10" maxlength="72"
+                  required placeholder="At least 10 characters">
+              </div>
+            </div>
+            <button class="primary-btn" type="submit">Create account</button>
+            <p class="tiny-note">Share the password privately. Ask the member to change it after their first login.</p>
+          </form>
+
+          <div id="members-list" class="member-list">
+            <div class="empty-state">Loading members…</div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </section>
+</body>
+</html>
