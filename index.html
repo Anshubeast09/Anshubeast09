@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#080914">
-  <title>Aadarsh Hub — Private Space</title>
+  <title>Aadarsh Hub â€” Private Space</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
@@ -44,7 +44,7 @@
         <div>
           <small>FOUNDED & MANAGED BY</small>
           <strong>Aadarsh Prajapati</strong>
-          <span>Owner · Aadarsh Hub</span>
+          <span>Owner Â· Aadarsh Hub</span>
         </div>
         <span class="owner-check">?</span>
       </div>
@@ -124,6 +124,7 @@
       <div id="owner-nav" class="hidden">
         <div class="nav-label">OWNER TOOLS</div>
         <button class="nav-item" data-panel="members">? <span>Members</span></button>
+        <button class="nav-item" data-panel="chat-settings">âš™ <span>Chat settings</span></button>
       </div>
 
       <div class="sidebar-bottom">
@@ -179,7 +180,7 @@
             <article class="stat-card glass">
               <span class="stat-icon">?</span>
               <small>YOUR FILE SPACE</small>
-              <strong id="stat-storage">—</strong>
+              <strong id="stat-storage">â€”</strong>
               <span class="stat-sub" id="storage-sub">Personal storage</span>
             </article>
           </div>
@@ -218,11 +219,11 @@
               <small>REALTIME</small>
             </div>
             <div id="chat-messages" class="chat-messages">
-              <div class="empty-state">Loading conversation…</div>
+              <div class="empty-state">Loading conversationâ€¦</div>
             </div>
             <form id="chat-form" class="chat-compose">
               <input id="chat-input" maxlength="4000"
-                placeholder="Write something to the group…" autocomplete="off">
+                placeholder="Write something to the groupâ€¦" autocomplete="off">
               <button type="submit" aria-label="Send message">?</button>
             </form>
           </div>
@@ -244,12 +245,12 @@
             <span>?</span>
             <div>
               <b>Personal storage</b>
-              <small id="quota-text">Checking your storage allowance…</small>
+              <small id="quota-text">Checking your storage allowanceâ€¦</small>
               <div class="progress"><i id="quota-progress"></i></div>
             </div>
           </div>
           <div id="my-files" class="file-list glass">
-            <div class="empty-state">Loading your files…</div>
+            <div class="empty-state">Loading your filesâ€¦</div>
           </div>
         </section>
 
@@ -266,7 +267,7 @@
             </label>
           </div>
           <div id="gallery-grid" class="gallery-grid">
-            <div class="empty-state">Loading gallery…</div>
+            <div class="empty-state">Loading galleryâ€¦</div>
           </div>
         </section>
 
@@ -305,7 +306,48 @@
           </form>
 
           <div id="members-list" class="member-list">
-            <div class="empty-state">Loading members…</div>
+            <div class="empty-state">Loading membersâ€¦</div>
+          </div>
+        </section>
+
+        <section id="panel-chat-settings" class="panel hidden">
+          <div class="section-heading">
+            <div>
+              <small>OWNER CONTROL CENTRE</small>
+              <h3>Chat retention settings</h3>
+              <p class="muted">Control how many recent group messages are retained.</p>
+            </div>
+          </div>
+
+          <div class="chat-settings-card glass">
+            <div class="chat-setting-row">
+              <div class="chat-setting-copy">
+                <b>Automatic chat cleanup</b>
+                <p>When enabled, older eligible messages are automatically removed in the background.</p>
+              </div>
+              <label class="switch-control" for="cleanup-enabled">
+                <input id="cleanup-enabled" type="checkbox">
+                <span class="switch-track"></span>
+              </label>
+            </div>
+
+            <div class="chat-setting-divider"></div>
+
+            <div class="chat-setting-field">
+              <label for="retention-limit">Messages to keep</label>
+              <input id="retention-limit" type="number" min="1" max="100000" step="1" value="500">
+              <small>Keep the latest number of eligible messages. Allowed range: 1â€“100000.</small>
+            </div>
+
+            <div class="chat-protection-note">
+              <b>Protected messages</b>
+              <p>Pinned messages and messages containing pinned attachments are protected from automatic cleanup.</p>
+            </div>
+
+            <div class="chat-settings-actions">
+              <button id="save-chat-settings" class="primary-btn" type="button">Save settings</button>
+              <span id="chat-settings-status" class="chat-settings-status" role="status">Settings have not been loaded yet.</span>
+            </div>
           </div>
         </section>
       </div>
