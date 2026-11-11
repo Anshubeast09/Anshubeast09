@@ -1,5 +1,5 @@
 
-/* AADARSH HUB — SUPABASE CONNECTION */
+/* AADARSH HUB â€” SUPABASE CONNECTION */
 
 const SUPABASE_URL = "https://atygompuhmarfdorifph.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_87rKjM0eqZiZlm-gIGRyGg_zd7h_Bgi";
@@ -264,7 +264,7 @@ async function login(e) {
   const btn = e.submitter;
 
   btn.disabled = true;
-  btn.textContent = "Signing in…";
+  btn.textContent = "Signing inâ€¦";
 
   const { data, error } = await db.auth.signInWithPassword({
     email,
@@ -404,12 +404,11 @@ async function loadMessages() {
   const box = $("chat-messages");
 
   box.innerHTML =
-    '<div class="empty-state">Loading conversation…</div>';
+    '<div class="empty-state">Loading conversationâ€¦</div>';
 
   const { data, error } = await db
     .from("messages")
-    .select("id,sender_id,content,created_at,profiles(display_name)")
-    .order("created_at", { ascending: true })
+	.select("id,sender_id,content,created_at,profiles!messages_sender_id_fkey(display_name)")    .order("created_at", { ascending: true })
     .limit(100);
 
   if (error) {
@@ -443,7 +442,7 @@ async function loadMessages() {
 
         const { data: row } = await db
           .from("messages")
-          .select("id,sender_id,content,created_at,profiles(display_name)")
+          .select("id,sender_id,content,created_at,profiles!messages_sender_id_fkey(display_name)")
           .eq("id", payload.new.id)
           .single();
 
@@ -505,7 +504,7 @@ async function loadFiles() {
   const box = $("my-files");
 
   box.innerHTML =
-    '<div class="empty-state">Loading your files…</div>';
+    '<div class="empty-state">Loading your filesâ€¦</div>';
 
   const { data, error } = await db
     .storage
@@ -561,7 +560,7 @@ async function loadFiles() {
         <b>${safeText(f.name)}</b>
         <small>
           ${bytes(f.metadata?.size || 0)}
-          · ${f.created_at ? niceDate(f.created_at) : "Stored in your locker"}
+          Â· ${f.created_at ? niceDate(f.created_at) : "Stored in your locker"}
         </small>
       </div>
 
@@ -684,7 +683,7 @@ async function loadGallery() {
   const box = $("gallery-grid");
 
   box.innerHTML =
-    '<div class="empty-state">Loading gallery…</div>';
+    '<div class="empty-state">Loading galleryâ€¦</div>';
 
   const { data: profiles, error: pErr } = await db
     .from("profiles")
@@ -764,7 +763,7 @@ async function loadGallery() {
         }
 
         <small>
-          ${safeText(f.owner)} · ${safeText(f.name)}
+          ${safeText(f.owner)} Â· ${safeText(f.name)}
         </small>
 
       </article>
@@ -838,7 +837,7 @@ async function createMember(e) {
   const btn = e.submitter;
 
   btn.disabled = true;
-  btn.textContent = "Creating…";
+  btn.textContent = "Creatingâ€¦";
 
   try {
 
@@ -877,7 +876,7 @@ async function loadMembers() {
   const box = $("members-list");
 
   box.innerHTML =
-    '<div class="empty-state">Loading members…</div>';
+    '<div class="empty-state">Loading membersâ€¦</div>';
 
   const { data, error } = await db
     .from("profiles")
@@ -994,7 +993,7 @@ async function saveMember(e) {
   }
 
   btn.disabled = true;
-  btn.textContent = "Saving…";
+  btn.textContent = "Savingâ€¦";
 
   try {
 
