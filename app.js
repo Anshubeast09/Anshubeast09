@@ -1,4 +1,3 @@
-
 /* AADARSH HUB — SUPABASE CONNECTION */
 
 const SUPABASE_URL = "https://atygompuhmarfdorifph.supabase.co";
@@ -48,6 +47,7 @@ const PERMISSION_LABELS = {
 };
 
 let toastTimer;
+
 
 /* GENERAL HELPERS */
 
@@ -139,6 +139,10 @@ function setPanel(name) {
     return toast("Gallery access is disabled for this account.", true);
   }
 
+  if (name === "chat-settings" && state.role !== "owner") {
+    return toast("Owner access only.", true);
+  }
+
   state.panel = name;
 
   document.querySelectorAll(".panel").forEach(p => {
@@ -156,7 +160,8 @@ function setPanel(name) {
     chat: "Group conversation.",
     files: "Your personal locker.",
     gallery: "Shared memories.",
-    members: "Member control."
+    members: "Member control.",
+    "chat-settings": "Chat settings."
   };
 
   $("page-title").textContent = titles[name];
@@ -167,6 +172,10 @@ function setPanel(name) {
   if (name === "chat") loadMessages();
   if (name === "files") loadFiles();
   if (name === "gallery") loadGallery();
+
+  if (name === "chat-settings" && state.role === "owner") {
+    loadChatSettings();
+  }
 
   if (name === "members" && state.role === "owner") {
     loadMembers();
@@ -408,7 +417,8 @@ async function loadMessages() {
 
   const { data, error } = await db
     .from("messages")
-	.select("id,sender_id,content,created_at,profiles!messages_sender_id_fkey(display_name)")    .order("created_at", { ascending: true })
+    .select("id,sender_id,content,created_at,profiles!messages_sender_id_fkey(display_name)")
+    .order("created_at", { ascending: true })
     .limit(100);
 
   if (error) {
@@ -812,6 +822,98 @@ async function uploadGalleryFile(file) {
 }
 
 
+/* CHAT RETENTION SETTINGS — OWNER ONLY */
+
+async function loadChatSettings() {
+
+  if (state.role !== "owner") return;
+
+  const status = $("chat-settings-status");
+  const limitInput = $("retention-limit");
+  const enabledInput = $("cleanup-enabled");
+
+  if (!status || !limitInput || !enabledInput) return;
+
+  status.textContent = "Loading settings…";
+
+  const { data, error } = await db
+    .from("chat_settings")
+    .select("retention_limit, cleanup_enabled")
+    .eq("id", true)
+    .single();
+
+  if (error) {
+    status.textContent = error.message;
+    toast(error.message, true);
+    return;
+  }
+
+  limitInput.value = data.retention_limit ?? 500;
+  enabledInput.checked = data.cleanup_enabled === true;
+
+  status.textContent = "Settings loaded.";
+}
+
+async function saveChatSettings() {
+
+  if (state.role !== "owner") {
+    return toast("Owner access only.", true);
+  }
+
+  const limitInput = $("retention-limit");
+  const enabledInput = $("cleanup-enabled");
+  const btn = $("save-chat-settings");
+  const status = $("chat-settings-status");
+
+  const limit = Number(limitInput.value);
+
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100000) {
+    status.textContent = "Enter a whole number between 1 and 100000.";
+    return toast("Retention limit must be between 1 and 100000.", true);
+  }
+
+  const enabled = enabledInput.checked;
+
+  btn.disabled = true;
+  btn.textContent = "Saving…";
+  status.textContent = "Saving settings…";
+
+  try {
+
+    const { error } = await db
+      .from("chat_settings")
+      .update({
+        retention_limit: limit,
+        cleanup_enabled: enabled,
+        updated_at: new Date().toISOString(),
+        updated_by: state.user.id
+      })
+      .eq("id", true);
+
+    if (error) throw error;
+
+    toast("Chat settings saved.");
+
+    status.textContent = enabled
+      ? "Saved. Automatic cleanup is enabled."
+      : "Saved. Automatic cleanup is disabled.";
+
+    await loadChatSettings();
+
+  } catch (err) {
+
+    status.textContent = err.message || "Could not save settings.";
+    toast(err.message || "Could not save chat settings.", true);
+
+  } finally {
+
+    btn.disabled = false;
+    btn.textContent = "Save settings";
+
+  }
+}
+
+
 /* OWNER FUNCTIONS */
 
 async function invokeOwnerFunction(name, body) {
@@ -1111,6 +1213,8 @@ $("hide-create-member").addEventListener("click", () => {
 $("create-member-form").addEventListener("submit", createMember);
 
 $("members-list").addEventListener("click", saveMember);
+
+$("save-chat-settings").addEventListener("click", saveChatSettings);
 
 $("mobile-menu").addEventListener("click", () => {
   $("sidebar").classList.toggle("open");
