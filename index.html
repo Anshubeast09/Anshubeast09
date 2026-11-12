@@ -1,392 +1,109 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Aadarsh Hub</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+</head><body>
+<div id="toast"></div>
 
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#080914">
-  <title>Aadarsh Hub — Private Space</title>
-  <link rel="icon" type="image/png" href="/logo.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="app.js"></script>
-</head>
-<body>
-  <div class="ambient ambient-one"></div>
-  <div class="ambient ambient-two"></div>
-  <canvas id="particles" aria-hidden="true"></canvas>
-  <div id="toast" class="toast" role="status"></div>
+<section id="landing" class="center">
+  <div class="logo big">AH</div>
+  <h1>One hub. Our universe.</h1>
+  <p class="mut">A private community for friends. Founded by Aadarsh Prajapati.</p>
+  <button class="btn" id="enter">Enter the Hub</button>
+</section>
 
-  <main id="landing" class="landing page">
-    <nav class="topbar">
-      <a class="brand" href="#">
-        <span class="brand-mark">AH</span>
-        <span>AADARSH<span class="brand-light"> HUB</span></span>
-      </a>
-      <span class="top-status"><i></i> PRIVATE COMMUNITY</span>
+<section id="login" class="center hide">
+  <form id="lf" class="card narrow">
+    <h2>Sign in</h2>
+    <div class="tabs"><button type="button" class="on" data-r="member">Member</button><button type="button" data-r="owner">Owner</button></div>
+    <input id="em" type="email" placeholder="Email" required autocomplete="username">
+    <input id="pw" type="password" placeholder="Password" required autocomplete="current-password">
+    <button class="btn">Sign in</button>
+    <button type="button" class="link" id="back">Back to home</button>
+  </form>
+</section>
+
+<div id="app" class="hide">
+  <aside id="side">
+    <div class="logo">AH</div>
+    <nav>
+      <button data-v="ov" class="on">Overview</button>
+      <button data-v="chat">Group Chat</button>
+      <button data-v="files">My Files</button>
+      <button data-v="gal">Common Gallery</button>
+      <button data-v="att">Attendance</button>
+      <button data-v="mem" class="own">Members</button>
+      <button data-v="set" class="own">Chat Settings</button>
     </nav>
+    <button class="link" id="out">Sign out</button>
+  </aside>
+  <main>
+    <button id="burger">Menu</button>
 
-    <section class="hero">
-      <div class="eyebrow">
-        <span class="eyebrow-line"></span>
-        YOUR SPACE. YOUR PEOPLE.
+    <section id="v-ov">
+      <h2 id="hi"></h2>
+      <div class="grid" id="stats"></div>
+    </section>
+
+    <section id="v-chat" class="hide">
+      <h2>Group chat</h2>
+      <div id="msgs" class="card"></div>
+      <div id="rp" class="reply hide"></div>
+      <div id="sug" class="hide"></div>
+      <div class="row">
+        <input id="ci" placeholder="Message (type @ to mention)" maxlength="4000">
+        <label class="btn alt">Attach<input id="cf" type="file" hidden></label>
+        <button class="btn" id="send">Send</button>
       </div>
-      <div class="hero-logo">A<span>H</span></div>
-      <h1>One hub.<br><span>Our universe.</span></h1>
-      <p class="hero-copy">
-        A private digital space to connect, share and keep your circle close.
-      </p>
+      <small id="cfn" class="mut"></small>
+    </section>
 
-      <div class="owner-card">
-        <div class="avatar avatar-large">AP</div>
-        <div>
-          <small>FOUNDED & MANAGED BY</small>
-          <strong>Aadarsh Prajapati</strong>
-          <span>Owner · Aadarsh Hub</span>
-        </div>
-        <span class="owner-check">?</span>
+    <section id="v-files" class="hide">
+      <h2>My files</h2>
+      <p class="mut" id="quota"></p>
+      <label class="btn">Upload file<input id="mf" type="file" hidden></label>
+      <div id="flist" class="list"></div>
+    </section>
+
+    <section id="v-gal" class="hide">
+      <h2>Common gallery</h2>
+      <label class="btn" id="gup">Upload to gallery<input id="gf" type="file" hidden></label>
+      <div id="glist" class="grid"></div>
+    </section>
+
+    <section id="v-att" class="hide">
+      <h2>Attendance</h2>
+      <p class="mut" id="today"></p>
+      <div class="row">
+        <select id="as"><option value="present">Present</option><option value="absent">Absent</option><option value="leave">Leave</option></select>
+        <input id="an" placeholder="Note (optional)">
+        <button class="btn" id="asave">Mark</button>
       </div>
+      <div id="alist" class="list"></div>
+    </section>
 
-      <button id="open-login" class="primary-btn hero-btn">
-        Enter the Hub <span>?</span>
-      </button>
+    <section id="v-mem" class="hide">
+      <h2>Members</h2>
+      <form id="mf2" class="card row">
+        <input id="mn" placeholder="Display name" required>
+        <input id="me" type="email" placeholder="Email" required>
+        <input id="mp" placeholder="Temporary password" minlength="8" required>
+        <button class="btn">Create member</button>
+      </form>
+      <div id="mlist"></div>
+    </section>
 
-      <div class="hero-foot">
-        <span>PRIVATE BY DESIGN</span>
-        <span>EST. 2026</span>
-        <span>BUILT FOR THE CIRCLE</span>
+    <section id="v-set" class="hide">
+      <h2>Chat settings</h2>
+      <div class="card narrow">
+        <label class="row"><input type="checkbox" id="sc"> Automatic chat cleanup</label>
+        <label>Messages to keep (1 to 10000)<input id="sr" type="number" min="1" max="10000"></label>
+        <button class="btn" id="ssave">Save settings</button>
       </div>
     </section>
   </main>
-
-  <section id="auth-view" class="auth-view page hidden">
-    <button class="back-btn" id="back-home">? Back</button>
-    <div class="auth-card glass">
-      <div class="auth-brand">
-        <span class="brand-mark">AH</span>
-        <div>
-          <b>AADARSH HUB</b>
-          <small>MEMBER ACCESS</small>
-        </div>
-      </div>
-
-      <h2>Welcome <span>back.</span></h2>
-      <p class="muted">Sign in to enter your private space.</p>
-
-      <div class="segmented">
-        <button class="active" data-role="member">Member Login</button>
-        <button data-role="owner">Owner Login</button>
-      </div>
-
-      <form id="login-form">
-        <label for="login-email">Email address</label>
-        <input id="login-email" type="email"
-          autocomplete="username" placeholder="you@example.com" required>
-
-        <label for="login-password">Password</label>
-        <input id="login-password" type="password"
-          autocomplete="current-password" placeholder="Your password" required>
-
-        <button class="primary-btn full" type="submit">
-          Sign in <span>?</span>
-        </button>
-      </form>
-
-      <p class="tiny-note">
-        Accounts are created by the Hub owner. Public sign-up is disabled.
-      </p>
-    </div>
-  </section>
-
-  <section id="app-view" class="app-view page hidden">
-    <aside id="sidebar" class="sidebar glass">
-      <a class="brand side-brand" href="#">
-        <span class="brand-mark">AH</span>
-        <span>AADARSH<span class="brand-light"> HUB</span></span>
-      </a>
-
-      <div class="side-user">
-        <div id="side-avatar" class="avatar">A</div>
-        <div>
-          <b id="side-name">Member</b>
-          <small id="side-role">MEMBER</small>
-        </div>
-      </div>
-
-      <div class="nav-label">WORKSPACE</div>
-      <button class="nav-item active" data-panel="overview">? <span>Overview</span></button>
-      <button class="nav-item" data-panel="chat">? <span>Group chat</span></button>
-      <button class="nav-item" data-panel="files">? <span>My files</span></button>
-      <button class="nav-item" data-panel="gallery">▧ <span>Common gallery</span></button>
-      <button class="nav-item" data-panel="attendance">✓ <span>Attendance</span></button>
-
-      <div id="owner-nav" class="hidden">
-        <div class="nav-label">OWNER TOOLS</div>
-        <button class="nav-item" data-panel="members">? <span>Members</span></button>
-        <button class="nav-item" data-panel="chat-settings">⚙ <span>Chat settings</span></button>
-      </div>
-
-      <div class="sidebar-bottom">
-        <div class="online-indicator">
-          <i></i> <span id="online-count">1 online</span>
-        </div>
-        <button id="logout" class="logout-btn">? Sign out</button>
-      </div>
-    </aside>
-
-    <div class="main-area">
-      <header class="app-header">
-        <div>
-          <div class="crumb">
-            AADARSH HUB <span>/</span> <b id="current-crumb">OVERVIEW</b>
-          </div>
-          <h1 id="page-title">Your space.</h1>
-        </div>
-        <div class="header-right">
-          <span class="live-pill"><i></i> LIVE</span>
-          <button id="mobile-menu" class="mobile-menu">?</button>
-          <div id="header-avatar" class="avatar">A</div>
-        </div>
-      </header>
-
-      <div class="content">
-        <section id="panel-overview" class="panel">
-          <div class="welcome-banner">
-            <div>
-              <div class="eyebrow">YOUR PRIVATE SPACE</div>
-              <h2>Good to see you,<br><span id="welcome-name">friend</span>.</h2>
-              <p>Your circle is right here. Make yourself at home.</p>
-            </div>
-            <div class="banner-orbit">
-              <div class="orbit-ring"></div>
-              <div class="orbit-core">AH</div>
-            </div>
-          </div>
-
-          <div class="stat-grid">
-            <article class="stat-card glass">
-              <span class="stat-icon">?</span>
-              <small>YOUR ROLE</small>
-              <strong id="stat-role">MEMBER</strong>
-              <span class="stat-sub">Inside the circle</span>
-            </article>
-            <article class="stat-card glass">
-              <span class="stat-icon">?</span>
-              <small>PEOPLE ONLINE</small>
-              <strong id="stat-online">1</strong>
-              <span class="stat-sub">Connected right now</span>
-            </article>
-            <article class="stat-card glass">
-              <span class="stat-icon">?</span>
-              <small>YOUR FILE SPACE</small>
-              <strong id="stat-storage">—</strong>
-              <span class="stat-sub" id="storage-sub">Personal storage</span>
-            </article>
-          </div>
-
-          <div class="section-heading">
-            <div><small>JUMP BACK IN</small><h3>Quick access</h3></div>
-          </div>
-
-          <div class="quick-grid">
-            <button class="quick-card glass" data-go="chat">
-              <span>?</span><b>Group chat</b>
-              <small>Talk with everyone</small><em>?</em>
-            </button>
-            <button class="quick-card glass" data-go="files">
-              <span>?</span><b>My files</b>
-              <small>Your personal locker</small><em>?</em>
-            </button>
-            <button class="quick-card glass" data-go="gallery">
-              <span>▧</span><b>Common gallery</b>
-              <small>Shared files</small><em>→</em>
-            </button>
-            <button class="quick-card glass" data-go="attendance">
-              <span>✓</span><b>Attendance</b>
-              <small>Mark today's status</small><em>→</em>
-            </button>
-          </div>
-        </section>
-
-        <section id="panel-chat" class="panel hidden">
-          <div class="section-heading">
-            <div>
-              <small>THE COMMON ROOM</small>
-              <h3>Group chat</h3>
-              <p class="muted">Messages appear live for active members.</p>
-            </div>
-          </div>
-          <div class="chat-shell glass">
-            <div class="chat-top">
-              <span><i class="online-dot"></i> Hub conversation</span>
-              <small>REALTIME</small>
-            </div>
-            <div id="chat-messages" class="chat-messages">
-              <div class="empty-state">Loading conversation…</div>
-            </div>
-            <div id="replying-to" class="replying-to hidden"></div>
-            <div class="chat-compose-tools">
-              <label class="chat-attach-btn" title="Attach a file">＋
-                <input id="chat-file-input" type="file" hidden>
-              </label>
-              <small>Attach image, video, audio or document (max 50 MB)</small>
-              <button id="cancel-reply" type="button" class="text-btn">Cancel reply</button>
-            </div>
-            <form id="chat-form" class="chat-compose">
-              <input id="chat-input" maxlength="4000"
-                placeholder="Write something… Use @name to mention" autocomplete="off">
-              <button id="chat-send" type="submit" aria-label="Send message">➤</button>
-            </form>
-            <div id="mention-suggestions" class="mention-suggestions hidden"></div>
-          </div>
-        </section>
-
-        <section id="panel-files" class="panel hidden">
-          <div class="section-heading">
-            <div>
-              <small>YOUR PRIVATE LOCKER</small>
-              <h3>My files</h3>
-              <p class="muted">Only you can access files in your personal folder.</p>
-            </div>
-            <label class="primary-btn upload-label">
-              + Upload file
-              <input id="file-upload" type="file" hidden>
-            </label>
-          </div>
-          <div class="storage-banner glass">
-            <span>?</span>
-            <div>
-              <b>Personal storage</b>
-              <small id="quota-text">Checking your storage allowance…</small>
-              <div class="progress"><i id="quota-progress"></i></div>
-            </div>
-          </div>
-          <div id="my-files" class="file-list glass">
-            <div class="empty-state">Loading your files…</div>
-          </div>
-        </section>
-
-        <section id="panel-gallery" class="panel hidden">
-          <div class="section-heading">
-            <div>
-              <small>SHARED WITH THE CIRCLE</small>
-              <h3>Common gallery</h3>
-              <p class="muted">Any file type shared by members. Preview depends on your browser.</p>
-            </div>
-            <label id="gallery-upload-wrap" class="primary-btn upload-label hidden">
-              + Share media
-              <input id="gallery-upload" type="file" hidden>
-            </label>
-          </div>
-          <div id="gallery-grid" class="gallery-grid">
-            <div class="empty-state">Loading gallery…</div>
-          </div>
-        </section>
-
-        <section id="panel-attendance" class="panel hidden">
-          <div class="section-heading">
-            <div><small>DAILY RECORD</small><h3>Attendance tracker</h3><p class="muted">Mark your own attendance for today.</p></div>
-          </div>
-          <div class="attendance-card glass">
-            <div id="attendance-today" class="attendance-today">Today</div>
-            <h3 id="attendance-current">Checking your attendance…</h3>
-            <label for="attendance-note">Note (optional)</label>
-            <input id="attendance-note" maxlength="250" placeholder="Add a short note">
-            <div id="attendance-actions" class="attendance-actions">
-              <button type="button" class="attendance-choice present" data-attendance="present">Present</button>
-              <button type="button" class="attendance-choice absent" data-attendance="absent">Absent</button>
-              <button type="button" class="attendance-choice leave" data-attendance="leave">Leave</button>
-            </div>
-            <small class="tiny-note">You can update your own status for the current day. Older records are read-only.</small>
-          </div>
-          <div class="section-heading attendance-heading"><div><small>RECENT RECORDS</small><h3>Attendance history</h3></div></div>
-          <div id="attendance-list" class="attendance-list glass"><div class="empty-state">Loading attendance…</div></div>
-        </section>
-
-        <section id="panel-members" class="panel hidden">
-          <div class="section-heading">
-            <div>
-              <small>CONTROL CENTRE</small>
-              <h3>Manage members</h3>
-              <p class="muted">Create accounts and manage access to your hub.</p>
-            </div>
-            <button id="show-create-member" class="primary-btn">+ Create member</button>
-          </div>
-
-          <form id="create-member-form" class="create-form glass hidden">
-            <div class="form-title">
-              <b>Create a member account</b>
-              <button type="button" id="hide-create-member" class="icon-btn">?</button>
-            </div>
-            <div class="form-grid">
-              <div>
-                <label>Display name</label>
-                <input id="new-name" maxlength="60" required placeholder="Member name">
-              </div>
-              <div>
-                <label>Email</label>
-                <input id="new-email" type="email" required placeholder="member@email.com">
-              </div>
-              <div>
-                <label>Temporary password</label>
-                <input id="new-password" type="password" minlength="10" maxlength="72"
-                  required placeholder="At least 10 characters">
-              </div>
-            </div>
-            <button class="primary-btn" type="submit">Create account</button>
-            <p class="tiny-note">Share the password privately. Ask the member to change it after their first login.</p>
-          </form>
-
-          <div id="members-list" class="member-list">
-            <div class="empty-state">Loading members…</div>
-          </div>
-        </section>
-
-        <section id="panel-chat-settings" class="panel hidden">
-          <div class="section-heading">
-            <div>
-              <small>OWNER CONTROL CENTRE</small>
-              <h3>Chat retention settings</h3>
-              <p class="muted">Control how many recent group messages are retained.</p>
-            </div>
-          </div>
-
-          <div class="chat-settings-card glass">
-            <div class="chat-setting-row">
-              <div class="chat-setting-copy">
-                <b>Automatic chat cleanup</b>
-                <p>When enabled, older eligible messages are automatically removed in the background.</p>
-              </div>
-              <label class="switch-control" for="cleanup-enabled">
-                <input id="cleanup-enabled" type="checkbox">
-                <span class="switch-track"></span>
-              </label>
-            </div>
-
-            <div class="chat-setting-divider"></div>
-
-            <div class="chat-setting-field">
-              <label for="retention-limit">Messages to keep</label>
-              <input id="retention-limit" type="number" min="1" max="10000" step="1" value="500">
-              <small>Keep the latest number of eligible messages. Allowed range: 1–10000.</small>
-            </div>
-
-            <div class="chat-protection-note">
-              <b>Protected messages</b>
-              <p>Pinned messages and messages containing pinned attachments are protected from automatic cleanup.</p>
-            </div>
-
-            <div class="chat-settings-actions">
-              <button id="save-chat-settings" class="primary-btn" type="button">Save settings</button>
-              <span id="chat-settings-status" class="chat-settings-status" role="status">Settings have not been loaded yet.</span>
-            </div>
-          </div>
-        </section>
-      </div>
-    </div>
-  </section>
-</body>
-</html>
+</div>
+<script src="app.js"></script>
+</body></html>
