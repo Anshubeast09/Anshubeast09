@@ -119,7 +119,8 @@
       <button class="nav-item active" data-panel="overview">? <span>Overview</span></button>
       <button class="nav-item" data-panel="chat">? <span>Group chat</span></button>
       <button class="nav-item" data-panel="files">? <span>My files</span></button>
-      <button class="nav-item" data-panel="gallery">? <span>Common gallery</span></button>
+      <button class="nav-item" data-panel="gallery">▧ <span>Common gallery</span></button>
+      <button class="nav-item" data-panel="attendance">✓ <span>Attendance</span></button>
 
       <div id="owner-nav" class="hidden">
         <div class="nav-label">OWNER TOOLS</div>
@@ -199,8 +200,12 @@
               <small>Your personal locker</small><em>?</em>
             </button>
             <button class="quick-card glass" data-go="gallery">
-              <span>?</span><b>Common gallery</b>
-              <small>Shared memories</small><em>?</em>
+              <span>▧</span><b>Common gallery</b>
+              <small>Shared files</small><em>→</em>
+            </button>
+            <button class="quick-card glass" data-go="attendance">
+              <span>✓</span><b>Attendance</b>
+              <small>Mark today's status</small><em>→</em>
             </button>
           </div>
         </section>
@@ -221,11 +226,20 @@
             <div id="chat-messages" class="chat-messages">
               <div class="empty-state">Loading conversation…</div>
             </div>
+            <div id="replying-to" class="replying-to hidden"></div>
+            <div class="chat-compose-tools">
+              <label class="chat-attach-btn" title="Attach a file">＋
+                <input id="chat-file-input" type="file" hidden>
+              </label>
+              <small>Attach image, video, audio or document (max 50 MB)</small>
+              <button id="cancel-reply" type="button" class="text-btn">Cancel reply</button>
+            </div>
             <form id="chat-form" class="chat-compose">
               <input id="chat-input" maxlength="4000"
-                placeholder="Write something to the group…" autocomplete="off">
-              <button type="submit" aria-label="Send message">?</button>
+                placeholder="Write something… Use @name to mention" autocomplete="off">
+              <button id="chat-send" type="submit" aria-label="Send message">➤</button>
             </form>
+            <div id="mention-suggestions" class="mention-suggestions hidden"></div>
           </div>
         </section>
 
@@ -259,16 +273,36 @@
             <div>
               <small>SHARED WITH THE CIRCLE</small>
               <h3>Common gallery</h3>
-              <p class="muted">Photos and videos shared by members.</p>
+              <p class="muted">Any file type shared by members. Preview depends on your browser.</p>
             </div>
             <label id="gallery-upload-wrap" class="primary-btn upload-label hidden">
               + Share media
-              <input id="gallery-upload" type="file" accept="image/*,video/*" hidden>
+              <input id="gallery-upload" type="file" hidden>
             </label>
           </div>
           <div id="gallery-grid" class="gallery-grid">
             <div class="empty-state">Loading gallery…</div>
           </div>
+        </section>
+
+        <section id="panel-attendance" class="panel hidden">
+          <div class="section-heading">
+            <div><small>DAILY RECORD</small><h3>Attendance tracker</h3><p class="muted">Mark your own attendance for today.</p></div>
+          </div>
+          <div class="attendance-card glass">
+            <div id="attendance-today" class="attendance-today">Today</div>
+            <h3 id="attendance-current">Checking your attendance…</h3>
+            <label for="attendance-note">Note (optional)</label>
+            <input id="attendance-note" maxlength="250" placeholder="Add a short note">
+            <div id="attendance-actions" class="attendance-actions">
+              <button type="button" class="attendance-choice present" data-attendance="present">Present</button>
+              <button type="button" class="attendance-choice absent" data-attendance="absent">Absent</button>
+              <button type="button" class="attendance-choice leave" data-attendance="leave">Leave</button>
+            </div>
+            <small class="tiny-note">You can update your own status for the current day. Older records are read-only.</small>
+          </div>
+          <div class="section-heading attendance-heading"><div><small>RECENT RECORDS</small><h3>Attendance history</h3></div></div>
+          <div id="attendance-list" class="attendance-list glass"><div class="empty-state">Loading attendance…</div></div>
         </section>
 
         <section id="panel-members" class="panel hidden">
@@ -335,8 +369,8 @@
 
             <div class="chat-setting-field">
               <label for="retention-limit">Messages to keep</label>
-              <input id="retention-limit" type="number" min="1" max="100000" step="1" value="500">
-              <small>Keep the latest number of eligible messages. Allowed range: 1–100000.</small>
+              <input id="retention-limit" type="number" min="1" max="10000" step="1" value="500">
+              <small>Keep the latest number of eligible messages. Allowed range: 1–10000.</small>
             </div>
 
             <div class="chat-protection-note">
