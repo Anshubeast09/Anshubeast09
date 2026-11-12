@@ -45,6 +45,13 @@
     <section id="v-ov">
       <h2 id="hi"></h2>
       <div class="grid" id="stats"></div>
+      <form id="pwf" class="card narrow">
+        <h2>Change password</h2>
+        <input id="p0" type="password" placeholder="Current password" required autocomplete="current-password">
+        <input id="p1" type="password" placeholder="New password (min 8 characters)" minlength="8" required autocomplete="new-password">
+        <input id="p2" type="password" placeholder="Confirm new password" minlength="8" required autocomplete="new-password">
+        <button class="btn">Update password</button>
+      </form>
     </section>
 
     <section id="v-chat" class="hide">
