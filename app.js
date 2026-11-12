@@ -305,3 +305,18 @@ async function delMember(id) {
   if (res.error) return toast(await fnErr(res));
   toast("Member deleted."); await loadPeople(); loadMembers();
 }
+
+// ---------- change password ----------
+$("#pwf").onsubmit = async e => {
+  e.preventDefault();
+  const p0 = $("#p0").value, p1 = $("#p1").value, p2 = $("#p2").value;
+  if (p1.length < 8) return toast("New password must be at least 8 characters.");
+  if (p1 !== p2) return toast("New passwords do not match.");
+  if (p1 === p0) return toast("New password must be different from the current one.");
+  const { data: u } = await db.auth.getUser();
+  const chk = await db.auth.signInWithPassword({ email: u.user.email, password: p0 });
+  if (chk.error) return toast("Current password is incorrect.");
+  const r = await db.auth.updateUser({ password: p1 });
+  if (r.error) return toast(r.error.message);
+  e.target.reset(); toast("Password updated.");
+};
