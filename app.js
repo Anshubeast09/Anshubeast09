@@ -1,13 +1,13 @@
 // ====== PASTE YOUR PUBLISHABLE KEY BELOW (never the service_role key) ======
 const SUPA_URL = "https://atygompuhmarfdorifph.supabase.co";
-const SUPA_KEY = "sb_publishable_87rKjM0eqZiZlm-gIGRyGg_zd7h_Bgi";
+const SUPA_KEY = "PASTE_YOUR_PUBLISHABLE_KEY_HERE";
 const db = supabase.createClient(SUPA_URL, SUPA_KEY);
 
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 const esc = t => String(t ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const MB = 1048576, EMOJI = ["👍", "❤️", "😂"];
 const PERMS = ["chat", "upload_files", "view_gallery", "upload_gallery", "change_theme"];
-let me = null, people = {}, roleSel = "member", replyTo = null, msgCache = {}, rxCache = [], online = 0, timer;
+let me = null, people = {}, roleSel = "member", replyTo = null, msgCache = {}, rxCache = [], online = 0, timer, urlCache = {}, busy = false, again = false;
 
 function toast(m) { const t = $("#toast"); t.textContent = m; t.classList.add("show"); clearTimeout(timer); timer = setTimeout(() => t.classList.remove("show"), 4000); }
 function must(r) { if (r.error) { console.error(r.error); toast(r.error.message); throw r.error; } return r.data; }
@@ -75,7 +75,7 @@ function startRealtime() {
   const ch = db.channel("hub-messages");
   ["messages", "chat_reactions", "chat_attachments"].forEach(t =>
     ch.on("postgres_changes", { event: "*", schema: "public", table: t }, () => {
-      clearTimeout(rt); rt = setTimeout(() => { if (!$("#v-chat").classList.contains("hide")) loadChat(true); }, 400);
+      clearTimeout(rt); rt = setTimeout(() => { if (!$("#v-chat").classList.contains("hide")) loadChat(true); }, 120);
     }));
   ch.subscribe();
 }
@@ -90,6 +90,11 @@ async function loadOverview() {
 
 // ---------- chat ----------
 async function loadChat(keepScroll) {
+  if (busy) { again = true; return; }
+  busy = true;
+  try { await drawChat(keepScroll); } finally { busy = false; if (again) { again = false; loadChat(true); } }
+}
+async function drawChat(keepScroll) {
   const box = $("#msgs");
   if (!can("chat")) { box.innerHTML = `<p class="mut">You do not have chat access.</p>`; return; }
   const stick = !keepScroll || box.scrollTop + box.clientHeight >= box.scrollHeight - 40;
@@ -103,8 +108,12 @@ async function loadChat(keepScroll) {
     ]);
   }
   rxCache = rx; msgCache = {}; m.forEach(x => msgCache[x.id] = x);
-  const urls = {};
-  await Promise.all(atts.map(async a => { const s = await db.storage.from(a.bucket_id).createSignedUrl(a.object_path, 3600); urls[a.id] = s.data && s.data.signedUrl; }));
+  const need = atts.filter(a => !(urlCache[a.object_path] && urlCache[a.object_path].exp > Date.now()));
+  if (need.length) {
+    const sg = await db.storage.from("chat-attachments").createSignedUrls(need.map(a => a.object_path), 3600);
+    (sg.data || []).forEach(u => { if (u.signedUrl) urlCache[u.path] = { url: u.signedUrl, exp: Date.now() + 3300000 }; });
+  }
+  const urls = {}; atts.forEach(a => { const c = urlCache[a.object_path]; urls[a.id] = c && c.url; });
   box.innerHTML = m.length ? m.map(x => {
     const q = x.reply_to_id && msgCache[x.reply_to_id] ? `<div class="q">${esc(nm(msgCache[x.reply_to_id].sender_id))}: ${esc(msgCache[x.reply_to_id].content.slice(0, 80))}</div>` : "";
     const files = atts.filter(a => a.message_id === x.id).map(a => media(urls[a.id], a.mime_type, a.file_name)).join("");
@@ -162,6 +171,7 @@ async function sendMsg() {
   $("#send").disabled = true;
   try {
     const row = must(await db.from("messages").insert({ sender_id: me.id, content: (text || "📎 " + file.name).slice(0, 4000), message_type: type, reply_to_id: replyTo }).select().single());
+    $("#ci").value = ""; replyTo = null; $("#rp").classList.add("hide"); loadChat();
     if (file) {
       const path = `${me.id}/${Date.now()}-${safe(file.name)}`;
       must(await db.storage.from("chat-attachments").upload(path, file, { contentType: file.type || "application/octet-stream" }));
@@ -248,11 +258,13 @@ async function loadMembers() {
     <label><input type="checkbox" class="en" ${p.is_enabled ? "checked" : ""}> enabled</label>
     ${PERMS.map(k => `<label><input type="checkbox" data-k="${k}" ${p.permissions && p.permissions[k] ? "checked" : ""}> ${k}</label>`).join("")}
     <label>MB <input type="number" class="q" min="0" max="5120" value="${Math.round((p.storage_limit_bytes || 0) / MB)}"></label>
-    <button class="btn">Save</button></div>`).join("");
+    <button class="btn" data-x="save">Save</button><button class="btn alt" data-x="edit">Edit</button>${p.role !== "owner" ? '<button class="btn alt" data-x="del">Delete</button>' : ""}</div>`).join("");
 }
 $("#mlist").onclick = async e => {
   if (e.target.tagName !== "BUTTON") return;
-  const r = e.target.closest("[data-id]"), perms = {};
+  const r = e.target.closest("[data-id]"), perms = {}, act = e.target.dataset.x;
+  if (act === "edit") return editMember(r.dataset.id);
+  if (act === "del") return delMember(r.dataset.id);
   r.querySelectorAll("[data-k]").forEach(c => perms[c.dataset.k] = c.checked);
   const mb = Math.min(5120, Math.max(0, +r.querySelector(".q").value || 0));
   const res = await db.functions.invoke("admin-update-member", { body: { member_id: r.dataset.id, is_enabled: r.querySelector(".en").checked, permissions: perms, storage_limit_bytes: mb * MB } });
@@ -277,3 +289,19 @@ $("#ssave").onclick = async () => {
   must(await db.from("chat_settings").update({ retention_limit: n, cleanup_enabled: $("#sc").checked, updated_by: me.id, updated_at: new Date().toISOString() }).eq("id", true).select("retention_limit,cleanup_enabled").single());
   toast("Settings saved.");
 };
+
+async function fnErr(res) { try { const j = await res.error.context.json(); return j.error || res.error.message; } catch (_) { return res.error.message; } }
+async function editMember(id) {
+  const name = prompt("Display name:", nm(id)); if (name === null) return;
+  const email = prompt("New email (leave empty to keep current):", ""); if (email === null) return;
+  const pw = prompt("New password, minimum 8 characters (leave empty to keep current):", ""); if (pw === null) return;
+  const res = await db.functions.invoke("admin-manage-member", { body: { action: "edit", member_id: id, display_name: name.trim(), email: email.trim(), password: pw } });
+  if (res.error) return toast(await fnErr(res));
+  toast("Member updated."); await loadPeople(); loadMembers();
+}
+async function delMember(id) {
+  if (prompt(`This permanently deletes ${nm(id)}, their messages and their files. Type DELETE to confirm:`) !== "DELETE") return;
+  const res = await db.functions.invoke("admin-manage-member", { body: { action: "delete", member_id: id } });
+  if (res.error) return toast(await fnErr(res));
+  toast("Member deleted."); await loadPeople(); loadMembers();
+}
