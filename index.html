@@ -45,15 +45,12 @@
     <div class="brand"><img class="logo" src="logo.svg" alt="NEXORA logo"><b>NEXORA</b></div>
     <div id="chip" class="chip"></div>
     <nav>
-      <button data-v="ov" class="on">Overview</button>
+      <button data-v="ov" class="on">Dashboard</button>
       <button data-v="chat">Group Chat <span class="bdg hide" id="cb"></span></button>
       <button data-v="files">My Files</button>
       <button data-v="gal">Common Gallery</button>
-      <button data-v="att">Attendance</button>
-      <button data-v="prof">Update Profile</button>
       <button data-v="acct">Settings</button>
-      <button data-v="mem" class="own">Members</button>
-      <button data-v="set" class="own">Chat Settings</button>
+      <button data-v="own" class="own">Owner Settings</button>
     </nav>
     <button class="link inst hide">Install app</button>
     <small class="mut ver"></small>
@@ -61,10 +58,14 @@
   </aside>
   <header id="top"><button id="burger" class="btn alt">Menu</button><span class="brand"><img class="logo sm" src="logo.svg" alt=""><b>NEXORA</b></span><span id="topav"></span></header>
   <main>
+    <div id="stor" class="stor"></div>
 
     <section id="v-ov">
       <h2 id="hi"></h2>
-      <div class="grid" id="stats"></div>
+      <div class="grid2">
+        <div class="card"><h2>Group chat</h2><p id="cprev" class="mut"></p><button class="btn" data-go="chat">Open chat</button></div>
+        <div class="card"><h2>Members</h2><small class="mut" id="mcount"></small><div id="mlist2"></div></div>
+      </div>
     </section>
 
     <section id="v-chat" class="hide">
@@ -104,10 +105,12 @@
       </div>
       <div id="alist" class="list"></div>
     </section>
-
-    <section id="v-prof" class="hide">
-      <h2>Update profile</h2>
-      <form id="pf" class="card narrow">
+  
+    <section id="v-acct" class="hide">
+      <h2>Settings</h2>
+      <p class="mut">NEXORA <span class="ver"></span></p>
+      <div class="tabs subtabs"><button type="button" class="on" data-p="sp-prof">Profile</button><button type="button" data-p="sp-look">Appearance</button><button type="button" data-p="sp-notif">Notifications</button><button type="button" data-p="sp-pw">Password</button></div>
+      <div id="sp-prof"><form id="pf" class="card narrow">
         <div class="row"><span id="pav"></span>
           <label class="btn alt">Change photo<input id="paf" type="file" accept="image/*" hidden></label>
           <button type="button" class="link" id="prm">Remove</button></div>
@@ -115,49 +118,40 @@
         <label>Bio<input id="pb" maxlength="160" placeholder="A line about you"></label>
         <small class="mut">Email: <span id="pe"></span></small>
         <button class="btn">Save profile</button>
-      </form>
-    </section>
-
-    <section id="v-acct" class="hide">
-      <h2>Settings</h2>
-      <p class="mut">NEXORA <span class="ver"></span></p>
-      <div class="card narrow"><h2>Appearance</h2>
+      </form></div>
+      <div id="sp-look" class="hide"><div class="card narrow"><h2>Appearance</h2>
         <div class="tabs" id="thm"><button type="button" data-t="dark">Dark</button><button type="button" data-t="light">Light</button></div>
         <div class="row" id="acc">
           <button type="button" class="sw" data-a="purple" style="background:#7c6cff" aria-label="Purple"></button>
           <button type="button" class="sw" data-a="blue" style="background:#3b82f6" aria-label="Blue"></button>
           <button type="button" class="sw" data-a="green" style="background:#10b981" aria-label="Green"></button>
           <button type="button" class="sw" data-a="pink" style="background:#ec4899" aria-label="Pink"></button></div>
-        <small class="mut" id="thmnote"></small></div>
-      <div class="card narrow"><h2>Notifications</h2><p class="mut" id="nstat"></p><label class="row"><input type="checkbox" id="snd"> Message sounds</label>
-        <button type="button" class="btn" id="nbtn">Enable notifications</button></div>
-      <form id="pwf" class="card narrow">
+        <small class="mut" id="thmnote"></small></div></div>
+      <div id="sp-notif" class="hide"><div class="card narrow"><h2>Notifications</h2><p class="mut" id="nstat"></p><label class="row"><input type="checkbox" id="snd"> Message sounds</label>
+        <button type="button" class="btn" id="nbtn">Enable notifications</button></div></div>
+      <div id="sp-pw" class="hide"><form id="pwf" class="card narrow">
         <h2>Change password</h2>
         <input id="p0" type="password" placeholder="Current password" required autocomplete="current-password">
         <input id="p1" type="password" placeholder="New password (min 8 characters)" minlength="8" required autocomplete="new-password">
         <input id="p2" type="password" placeholder="Confirm new password" minlength="8" required autocomplete="new-password">
         <button class="btn">Update password</button>
-      </form>
+      </form></div>
     </section>
 
-    <section id="v-mem" class="hide">
-      <h2>Members</h2>
-      <form id="mf2" class="card row">
+    <section id="v-own" class="hide">
+      <h2>Owner settings</h2>
+      <div class="tabs subtabs"><button type="button" class="on" data-p="op-mem">Members</button><button type="button" data-p="op-chat">Chat cleanup</button></div>
+      <div id="op-mem"><form id="mf2" class="card row">
         <input id="mn" placeholder="Display name" required>
         <input id="me" type="email" placeholder="Email" required>
         <input id="mp" placeholder="Temporary password" minlength="8" required>
         <button class="btn">Create member</button>
-      </form>
-      <div id="mlist"></div>
-    </section>
-
-    <section id="v-set" class="hide">
-      <h2>Chat settings</h2>
-      <div class="card narrow">
+      </form><div id="mlist"></div></div>
+      <div id="op-chat" class="hide"><div class="card narrow">
         <label class="row"><input type="checkbox" id="sc"> Automatic chat cleanup</label>
         <label>Messages to keep (1 to 10000)<input id="sr" type="number" min="1" max="10000"></label>
         <button class="btn" id="ssave">Save settings</button>
-      </div>
+      </div></div>
     </section>
   </main>
 </div>
