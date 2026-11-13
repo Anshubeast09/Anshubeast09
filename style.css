@@ -134,3 +134,15 @@ main{padding-bottom:max(22px,env(safe-area-inset-bottom))}
 :root[data-theme="light"] #toast,:root[data-theme="light"] #sug{background:#fff}
 :root[data-theme="light"] nav button.on,:root[data-theme="light"] nav button:hover{background:#eef0ff}
 :root[data-theme="light"] #landing h1{background:linear-gradient(135deg,#1a1f4d,var(--ac) 70%,var(--ac2));-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* ---- v6: dashboard, storage bar, sub-tabs ---- */
+.stor{margin-bottom:14px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+.stor .row{justify-content:space-between;gap:8px}
+.bar{height:8px;border-radius:8px;background:var(--line);overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--ac),var(--ac2));transition:width .3s}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+#mlist2{max-height:360px;overflow:auto;margin-top:8px}
+.mem{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.mem>div{flex:1;min-width:0}.mem small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dot{width:10px;height:10px;border-radius:50%;background:#59607f;flex:none}.dot.on{background:#34d399;box-shadow:0 0 0 3px rgba(52,211,153,.25)}
+.subtabs{flex-wrap:wrap;margin-bottom:14px}.subtabs button{min-width:90px}
