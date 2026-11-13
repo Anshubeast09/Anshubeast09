@@ -48,22 +48,26 @@ async function boot(user, checkRole) {
   $("#gup").classList.toggle("hide", !can("upload_gallery"));
   page("app");
   await loadPeople();
+  paintMe();
   go("ov");
   startRealtime();
 }
 (async () => { const { data } = await db.auth.getSession(); if (data.session) boot(data.session.user, false); })();
 
 async function loadPeople() {
-  const d = must(await db.from("profiles").select("id,display_name,role,is_enabled"));
+  let q = await db.from("profiles").select("id,display_name,role,is_enabled,avatar_url,bio");
+  if (q.error) q = await db.from("profiles").select("id,display_name,role,is_enabled");
+  const d = must(q);
   people = {}; d.forEach(p => people[p.id] = p);
 }
 
-$$("nav button").forEach(b => b.onclick = () => { go(b.dataset.v); $("#side").classList.remove("open"); });
-$("#burger").onclick = () => $("#side").classList.toggle("open");
+$$("nav button").forEach(b => b.onclick = () => { go(b.dataset.v); toggleSide(false); });
+$("#burger").onclick = () => toggleSide();
+$("#scrim").onclick = () => toggleSide(false);
 function go(v) {
   $$("nav button").forEach(b => b.classList.toggle("on", b.dataset.v === v));
   $$("main > section").forEach(s => s.classList.toggle("hide", s.id !== "v-" + v));
-  ({ ov: loadOverview, chat: loadChat, files: loadFiles, gal: loadGallery, att: loadAttendance, mem: loadMembers, set: loadSettings })[v]();
+  ({ ov: loadOverview, chat: loadChat, files: loadFiles, gal: loadGallery, att: loadAttendance, mem: loadMembers, set: loadSettings, prof: loadProfile, acct: () => {} })[v]();
 }
 
 // ---------- realtime ----------
@@ -123,8 +127,9 @@ async function drawChat(keepScroll) {
       return `<button data-a="rx" data-id="${x.id}" data-e="${em}" class="${mine ? "me" : ""}">${em} ${list.length || ""}</button>`;
     }).join("");
     const canPin = x.sender_id === me.id || me.role === "owner";
-    return `<div class="m ${x.is_pinned ? "pin" : ""}">${x.is_pinned ? "📌 " : ""}<b>${esc(nm(x.sender_id))}</b><small>${new Date(x.created_at).toLocaleString()}</small>${q}<div>${text}</div>${files}
-      <div class="acts">${rb}<button data-a="reply" data-id="${x.id}">Reply</button>${canPin ? `<button data-a="pin" data-id="${x.id}" data-p="${x.is_pinned ? 1 : 0}">${x.is_pinned ? "Unpin" : "Pin"}</button>` : ""}</div></div>`;
+    const mine = x.sender_id === me.id;
+    return `<div class="m ${mine ? "mine" : "other"} ${x.is_pinned ? "pin" : ""}">${mine ? "" : av(people[x.sender_id], 34)}<div class="bub">${x.is_pinned ? "📌 " : ""}<b>${mine ? "You" : esc(nm(x.sender_id))}</b><small>${new Date(x.created_at).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}</small>${q}<div>${text}</div>${files}
+      <div class="acts">${rb}<button data-a="reply" data-id="${x.id}">Reply</button>${canPin ? `<button data-a="pin" data-id="${x.id}" data-p="${x.is_pinned ? 1 : 0}">${x.is_pinned ? "Unpin" : "Pin"}</button>` : ""}</div></div></div>`;
   }).join("") : `<p class="mut">No messages yet. Say hello.</p>`;
   if (stick) box.scrollTop = box.scrollHeight;
 }
@@ -352,3 +357,46 @@ $$(".inst").forEach(b => b.onclick = async () => { if (!installEvt) return; inst
 addEventListener("appinstalled", () => showInst(false));
 if (/iphone|ipad/i.test(navigator.userAgent) && !navigator.standalone) $("#ioshint").classList.remove("hide");
 if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(console.error));
+
+// ---------- avatars, sidebar, mobile menu ----------
+const av = (p, sz = 34) => {
+  p = p || {}; const st = `--s:${sz}px`;
+  return p.avatar_url && p.avatar_url.startsWith("data:image/jpeg;base64,")
+    ? `<img class="av" style="${st}" src="${esc(p.avatar_url)}" alt="">`
+    : `<span class="av" style="${st}">${esc((p.display_name || "?").trim().charAt(0).toUpperCase())}</span>`;
+};
+function paintMe() {
+  const p = { ...me, ...(people[me.id] || {}) };
+  $("#chip").innerHTML = `${av(p, 38)}<div><b>${esc(p.display_name)}</b><small>${esc(p.role)}</small></div>`;
+  $("#topav").innerHTML = av(p, 32);
+}
+function toggleSide(on) { const o = $("#side").classList.toggle("open", on); $("#scrim").classList.toggle("hide", !o); }
+
+// ---------- update profile ----------
+let newAvatar = null, clearAv = false;
+async function loadProfile() {
+  newAvatar = null; clearAv = false;
+  const p = { ...me, ...(people[me.id] || {}) };
+  $("#pn").value = p.display_name || ""; $("#pb").value = p.bio || ""; $("#pav").innerHTML = av(p, 84);
+  const u = await db.auth.getUser(); $("#pe").textContent = (u.data.user && u.data.user.email) || "";
+}
+function resizeImg(file, n) {
+  return new Promise((ok, no) => {
+    const u = URL.createObjectURL(file), i = new Image();
+    i.onload = () => { const c = document.createElement("canvas"); c.width = c.height = n; const m = Math.min(i.width, i.height);
+      c.getContext("2d").drawImage(i, (i.width - m) / 2, (i.height - m) / 2, m, m, 0, 0, n, n); URL.revokeObjectURL(u); ok(c.toDataURL("image/jpeg", 0.8)); };
+    i.onerror = () => no(new Error("Could not read this image")); i.src = u;
+  });
+}
+$("#paf").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  if (!f.type.startsWith("image/")) return toast("Please choose an image file.");
+  try { newAvatar = await resizeImg(f, 160); clearAv = false; $("#pav").innerHTML = av({ avatar_url: newAvatar, display_name: $("#pn").value }, 84); }
+  catch (err) { toast(err.message); }
+};
+$("#prm").onclick = () => { newAvatar = null; clearAv = true; $("#pav").innerHTML = av({ display_name: $("#pn").value }, 84); };
+$("#pf").onsubmit = async e => {
+  e.preventDefault();
+  const row = must(await db.rpc("ah_update_my_profile", { p_display_name: $("#pn").value.trim(), p_bio: $("#pb").value, p_avatar_url: newAvatar, p_clear_avatar: clearAv }));
+  me = { ...me, ...row }; await loadPeople(); paintMe(); toast("Profile updated.");
+};
