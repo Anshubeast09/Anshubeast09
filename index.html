@@ -46,7 +46,7 @@
     <div id="chip" class="chip"></div>
     <nav>
       <button data-v="ov" class="on">Overview</button>
-      <button data-v="chat">Group Chat</button>
+      <button data-v="chat">Group Chat <span class="bdg hide" id="cb"></span></button>
       <button data-v="files">My Files</button>
       <button data-v="gal">Common Gallery</button>
       <button data-v="att">Attendance</button>
@@ -69,6 +69,7 @@
 
     <section id="v-chat" class="hide">
       <h2>Group chat</h2>
+      <input id="csearch" type="search" placeholder="Search messages (press Enter)">
       <div id="msgs" class="card"></div>
       <div id="rp" class="reply hide"></div>
       <div id="sug" class="hide"></div>
@@ -120,6 +121,15 @@
     <section id="v-acct" class="hide">
       <h2>Settings</h2>
       <p class="mut">NEXORA <span class="ver"></span></p>
+      <div class="card narrow"><h2>Appearance</h2>
+        <div class="tabs" id="thm"><button type="button" data-t="dark">Dark</button><button type="button" data-t="light">Light</button></div>
+        <div class="row" id="acc">
+          <button type="button" class="sw" data-a="purple" style="background:#7c6cff" aria-label="Purple"></button>
+          <button type="button" class="sw" data-a="blue" style="background:#3b82f6" aria-label="Blue"></button>
+          <button type="button" class="sw" data-a="green" style="background:#10b981" aria-label="Green"></button>
+          <button type="button" class="sw" data-a="pink" style="background:#ec4899" aria-label="Pink"></button></div>
+        <small class="mut" id="thmnote"></small></div>
+      <div class="card narrow"><h2>Notifications</h2><p class="mut" id="nstat"></p><button type="button" class="btn" id="nbtn">Enable notifications</button></div>
       <form id="pwf" class="card narrow">
         <h2>Change password</h2>
         <input id="p0" type="password" placeholder="Current password" required autocomplete="current-password">
