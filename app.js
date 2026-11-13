@@ -1,6 +1,6 @@
 // ====== PASTE YOUR PUBLISHABLE KEY BELOW (never the service_role key) ======
 const SUPA_URL = "https://atygompuhmarfdorifph.supabase.co";
-const SUPA_KEY = "sb_publishable_87rKjM0eqZiZlm-gIGRyGg_zd7h_Bgi";
+const SUPA_KEY = "PASTE_YOUR_PUBLISHABLE_KEY_HERE";
 const db = supabase.createClient(SUPA_URL, SUPA_KEY);
 
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
@@ -44,6 +44,7 @@ async function boot(user, checkRole) {
   if (!p.is_enabled) { await db.auth.signOut(); return toast("This account is disabled."); }
   if (checkRole && p.role !== roleSel) { await db.auth.signOut(); return toast(`This account is a ${p.role}. Choose the ${p.role} tab.`); }
   me = p;
+  applyTheme();
   $$(".own").forEach(x => x.classList.toggle("hide", me.role !== "owner"));
   $("#gup").classList.toggle("hide", !can("upload_gallery"));
   page("app");
@@ -51,6 +52,7 @@ async function boot(user, checkRole) {
   paintMe();
   go("ov");
   startRealtime();
+  initUnread();
 }
 (async () => { const { data } = await db.auth.getSession(); if (data.session) boot(data.session.user, false); })();
 
@@ -67,7 +69,7 @@ $("#scrim").onclick = () => toggleSide(false);
 function go(v) {
   $$("nav button").forEach(b => b.classList.toggle("on", b.dataset.v === v));
   $$("main > section").forEach(s => s.classList.toggle("hide", s.id !== "v-" + v));
-  ({ ov: loadOverview, chat: loadChat, files: loadFiles, gal: loadGallery, att: loadAttendance, mem: loadMembers, set: loadSettings, prof: loadProfile, acct: () => {} })[v]();
+  ({ ov: loadOverview, chat: loadChat, files: loadFiles, gal: loadGallery, att: loadAttendance, mem: loadMembers, set: loadSettings, prof: loadProfile, acct: () => { notifUI(); applyTheme(); } })[v]();
 }
 
 // ---------- realtime ----------
@@ -81,6 +83,7 @@ function startRealtime() {
     ch.on("postgres_changes", { event: "*", schema: "public", table: t }, () => {
       clearTimeout(rt); rt = setTimeout(() => { if (!$("#v-chat").classList.contains("hide")) loadChat(true); }, 120);
     }));
+  ch.on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, p => onNewMsg(p.new));
   ch.subscribe();
 }
 
@@ -94,6 +97,7 @@ async function loadOverview() {
 
 // ---------- chat ----------
 async function loadChat(keepScroll) {
+  if (searching) { if (keepScroll) return; searching = false; $("#csearch").value = ""; }
   if (busy) { again = true; return; }
   busy = true;
   try { await drawChat(keepScroll); } finally { busy = false; if (again) { again = false; loadChat(true); } }
@@ -128,15 +132,18 @@ async function drawChat(keepScroll) {
     }).join("");
     const canPin = x.sender_id === me.id || me.role === "owner";
     const mine = x.sender_id === me.id;
-    return `<div class="m ${mine ? "mine" : "other"} ${x.is_pinned ? "pin" : ""}">${mine ? "" : av(people[x.sender_id], 34)}<div class="bub">${x.is_pinned ? "📌 " : ""}<b>${mine ? "You" : esc(nm(x.sender_id))}</b><small>${new Date(x.created_at).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}</small>${q}<div>${text}</div>${files}
-      <div class="acts">${rb}<button data-a="reply" data-id="${x.id}">Reply</button>${canPin ? `<button data-a="pin" data-id="${x.id}" data-p="${x.is_pinned ? 1 : 0}">${x.is_pinned ? "Unpin" : "Pin"}</button>` : ""}</div></div></div>`;
+    return `<div class="m ${mine ? "mine" : "other"} ${x.is_pinned ? "pin" : ""} ${!mine && mentionsMe(x.content) ? "ment" : ""}">${mine ? "" : av(people[x.sender_id], 34)}<div class="bub">${x.is_pinned ? "📌 " : ""}<b>${mine ? "You" : esc(nm(x.sender_id))}</b><small>${new Date(x.created_at).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}</small>${q}<div>${text}${x.edited_at ? " <small>(edited)</small>" : ""}</div>${files}
+      <div class="acts">${rb}<button data-a="reply" data-id="${x.id}">Reply</button>${canPin ? `<button data-a="pin" data-id="${x.id}" data-p="${x.is_pinned ? 1 : 0}">${x.is_pinned ? "Unpin" : "Pin"}</button>` : ""}${mine && x.message_type === "text" ? `<button data-a="edit" data-id="${x.id}">Edit</button>` : ""}${mine || me.role === "owner" ? `<button data-a="del" data-id="${x.id}">Delete</button>` : ""}</div></div></div>`;
   }).join("") : `<p class="mut">No messages yet. Say hello.</p>`;
   if (stick) box.scrollTop = box.scrollHeight;
+  if (!document.hidden) markSeen();
 }
 
 $("#msgs").onclick = async e => {
   const b = e.target.closest("[data-a]"); if (!b) return;
   const id = +b.dataset.id, a = b.dataset.a;
+  if (a === "edit") return editMsg(id);
+  if (a === "del") return delMsg(id);
   if (a === "reply") { replyTo = id; const r = $("#rp"); r.textContent = "Replying to " + nm(msgCache[id].sender_id) + " (click to cancel)"; r.classList.remove("hide"); $("#ci").focus(); }
   if (a === "pin") {
     const on = b.dataset.p === "0";
@@ -400,3 +407,88 @@ $("#pf").onsubmit = async e => {
   const row = must(await db.rpc("ah_update_my_profile", { p_display_name: $("#pn").value.trim(), p_bio: $("#pb").value, p_avatar_url: newAvatar, p_clear_avatar: clearAv }));
   me = { ...me, ...row }; await loadPeople(); paintMe(); toast("Profile updated.");
 };
+
+// ---------- version ----------
+const APP_VERSION = "V.01.01";
+$$(".ver").forEach(e => e.textContent = APP_VERSION);
+
+// ---------- local preferences ----------
+const store = { get: k => { try { return localStorage.getItem(k); } catch (_) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} } };
+
+// ---------- theme ----------
+function applyTheme() {
+  const ok = !me || can("change_theme");
+  const t = ok ? store.get("nx_theme") || "dark" : "dark", a = ok ? store.get("nx_accent") || "purple" : "purple";
+  document.documentElement.dataset.theme = t; document.documentElement.dataset.accent = a;
+  $('meta[name="theme-color"]').content = t === "light" ? "#f3f5ff" : "#0a0d1c";
+  $$("#thm button").forEach(b => b.classList.toggle("on", b.dataset.t === t));
+  $$("#acc button").forEach(b => b.classList.toggle("on", b.dataset.a === a));
+  $("#thmnote").textContent = ok ? "Saved on this device." : "The owner has not allowed theme changes for your account.";
+}
+$("#thm").onclick = e => { const t = e.target.dataset.t; if (t && can("change_theme")) { store.set("nx_theme", t); applyTheme(); } };
+$("#acc").onclick = e => { const a = e.target.dataset.a; if (a && can("change_theme")) { store.set("nx_accent", a); applyTheme(); } };
+applyTheme();
+
+// ---------- unread + notifications ----------
+let unread = 0, searching = false;
+const seenKey = () => "nx_seen_" + me.id;
+function setUnread(n) { unread = n; const b = $("#cb"); b.textContent = n > 99 ? "99+" : n; b.classList.toggle("hide", !n); document.title = (n ? `(${n}) ` : "") + "NEXORA"; }
+function markSeen() { store.set(seenKey(), new Date().toISOString()); setUnread(0); }
+async function initUnread() {
+  if (!can("chat")) return;
+  const last = store.get(seenKey()); if (!last) return markSeen();
+  const r = await db.from("messages").select("id", { count: "exact", head: true }).gt("created_at", last).neq("sender_id", me.id);
+  setUnread(r.count || 0);
+}
+const mentionsMe = t => !!t && t.toLowerCase().includes("@" + nm(me.id).replace(/\s+/g, "").toLowerCase());
+const notifOn = () => store.get("nx_notif") === "1" && "Notification" in window && Notification.permission === "granted";
+function notify(title, body, tag) {
+  if (!notifOn()) return;
+  const o = { body, icon: "icon-192.png", badge: "icon-192.png", tag };
+  const fb = () => { try { new Notification(title, o); } catch (_) {} };
+  if (navigator.serviceWorker) navigator.serviceWorker.ready.then(r => r.showNotification(title, o)).catch(fb); else fb();
+}
+function onNewMsg(m) {
+  if (!me || !can("chat") || m.sender_id === me.id) return;
+  if (!$("#v-chat").classList.contains("hide") && !document.hidden) return;
+  setUnread(unread + 1);
+  notify(mentionsMe(m.content) ? `${nm(m.sender_id)} mentioned you` : nm(m.sender_id), (m.content || "").slice(0, 120), "nx-" + m.id);
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden && me && !$("#v-chat").classList.contains("hide")) markSeen(); });
+function notifUI() {
+  const st = $("#nstat"), b = $("#nbtn");
+  if (!("Notification" in window)) { st.textContent = "This browser does not support notifications."; b.classList.add("hide"); return; }
+  const on = notifOn(), denied = Notification.permission === "denied";
+  st.textContent = denied ? "Blocked. Allow notifications for this site in browser settings." : on ? "On: you get a notification for every new message while NEXORA is open or running in the background." : "Off.";
+  b.textContent = on ? "Turn off" : "Enable notifications"; b.disabled = denied;
+}
+$("#nbtn").onclick = async () => {
+  if (notifOn()) { store.set("nx_notif", "0"); return notifUI(); }
+  const p = await Notification.requestPermission();
+  store.set("nx_notif", p === "granted" ? "1" : "0"); notifUI();
+  if (p === "granted") notify("NEXORA", "Notifications are on.", "nx-test");
+};
+
+// ---------- chat edit / delete / search ----------
+async function editMsg(id) {
+  const old = msgCache[id]; if (!old) return;
+  const t = prompt("Edit message:", old.content); if (t === null) return;
+  const v = t.trim(); if (!v || v === old.content) return;
+  must(await db.rpc("ah_edit_message", { p_id: id, p_content: v.slice(0, 4000) })); loadChat(true);
+}
+async function delMsg(id) {
+  if (!confirm("Delete this message?")) return;
+  const paths = must(await db.rpc("ah_delete_message", { p_id: id }));
+  if (paths && paths.length) await db.storage.from("chat-attachments").remove(paths);
+  loadChat(true);
+}
+$("#csearch").onkeydown = async e => {
+  if (e.key !== "Enter") return;
+  const q = e.target.value.trim();
+  if (!q) { if (searching) { searching = false; loadChat(); } return; }
+  searching = true;
+  const d = must(await db.from("messages").select("*").ilike("content", `%${q}%`).order("created_at", { ascending: false }).limit(50));
+  $("#msgs").innerHTML = `<p class="mut">${d.length} result(s). Clear the box and press Enter to go back.</p>` +
+    d.map(x => `<div class="sr"><b>${esc(nm(x.sender_id))}</b> <small class="mut">${new Date(x.created_at).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}</small><div>${esc(x.content)}</div></div>`).join("");
+};
+$("#csearch").oninput = e => { if (!e.target.value && searching) { searching = false; loadChat(); } };
