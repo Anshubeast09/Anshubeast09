@@ -47,6 +47,7 @@
     <nav>
       <button data-v="ov" class="on">Dashboard</button>
       <button data-v="chat">Group Chat <span class="bdg hide" id="cb"></span></button>
+      <button data-v="dm">Messages <span class="bdg hide" id="db"></span></button>
       <button data-v="files">My Files</button>
       <button data-v="gal">Common Gallery</button>
       <button data-v="acct">Settings</button>
@@ -77,9 +78,28 @@
       <div class="row">
         <input id="ci" placeholder="Message (type @ to mention)" maxlength="4000">
         <label class="btn alt">Attach<input id="cf" type="file" hidden></label>
+        <button class="btn alt" id="cmic" type="button" aria-label="Record voice note">🎤</button>
         <button class="btn" id="send">Send</button>
       </div>
       <small id="cfn" class="mut"></small>
+    </section>
+
+    <section id="v-dm" class="hide">
+      <h2>Messages</h2>
+      <div class="dmwrap" id="dmwrap">
+        <div class="card dmside" id="dmlist"></div>
+        <div class="dmmain">
+          <div class="dmhead"><button class="btn alt" id="dmback" type="button">Back</button><b id="dmname">Select a member</b></div>
+          <div id="dmmsgs" class="card"></div>
+          <div class="row">
+            <input id="dmi" placeholder="Message" maxlength="4000">
+            <label class="btn alt">Attach<input id="dmf" type="file" hidden></label>
+            <button class="btn alt" id="dmic" type="button" aria-label="Record voice note">🎤</button>
+            <button class="btn" id="dmsend" type="button">Send</button>
+          </div>
+          <small id="dmfn" class="mut"></small>
+        </div>
+      </div>
     </section>
 
     <section id="v-files" class="hide">
@@ -125,7 +145,12 @@
           <button type="button" class="sw" data-a="purple" style="background:#7c6cff" aria-label="Purple"></button>
           <button type="button" class="sw" data-a="blue" style="background:#3b82f6" aria-label="Blue"></button>
           <button type="button" class="sw" data-a="green" style="background:#10b981" aria-label="Green"></button>
-          <button type="button" class="sw" data-a="pink" style="background:#ec4899" aria-label="Pink"></button></div>
+          <button type="button" class="sw" data-a="pink" style="background:#ec4899" aria-label="Pink"></button>
+          <button type="button" class="sw" data-a="amber" style="background:#f59e0b" aria-label="Amber"></button>
+          <button type="button" class="sw" data-a="cyan" style="background:#06b6d4" aria-label="Cyan"></button></div>
+        <small class="mut">Interactive background (react to mouse / touch)</small>
+        <div class="tabs wrap" id="scn">
+          <button type="button" data-s="particles">Particles</button><button type="button" data-s="stars">Starfield</button><button type="button" data-s="matrix">Matrix</button><button type="button" data-s="fireflies">Fireflies</button><button type="button" data-s="bubbles">Bubbles</button><button type="button" data-s="aurora">Aurora</button><button type="button" data-s="ripples">Ripples</button><button type="button" data-s="none">None</button></div>
         <small class="mut" id="thmnote"></small></div></div>
       <div id="sp-notif" class="hide"><div class="card narrow"><h2>Notifications</h2><p class="mut" id="nstat"></p><label class="row"><input type="checkbox" id="snd"> Message sounds</label>
         <button type="button" class="btn" id="nbtn">Enable notifications</button></div></div>
