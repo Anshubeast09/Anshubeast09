@@ -1,6 +1,6 @@
 // ====== PASTE YOUR PUBLISHABLE KEY BELOW (never the service_role key) ======
 const SUPA_URL = "https://atygompuhmarfdorifph.supabase.co";
-const SUPA_KEY = "sb_publishable_sloNZpolPF-7mv0i0kxErQ_iPf3jKmk";
+const SUPA_KEY = "sb_publishable_87rKjM0eqZiZlm-gIGRyGg_zd7h_Bgi";
 const db = supabase.createClient(SUPA_URL, SUPA_KEY);
 
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
