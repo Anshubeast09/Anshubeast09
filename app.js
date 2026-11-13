@@ -1,6 +1,6 @@
 // ====== PASTE YOUR PUBLISHABLE KEY BELOW (never the service_role key) ======
 const SUPA_URL = "https://atygompuhmarfdorifph.supabase.co";
-const SUPA_KEY = "sb_publishable_87rKjM0eqZiZlm-gIGRyGg_zd7h_Bgi";
+const SUPA_KEY = "sb_publishable_sloNZpolPF-7mv0i0kxErQ_iPf3jKmk";
 const db = supabase.createClient(SUPA_URL, SUPA_KEY);
 
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
@@ -320,3 +320,35 @@ $("#pwf").onsubmit = async e => {
   if (r.error) return toast(r.error.message);
   e.target.reset(); toast("Password updated.");
 };
+
+// ---------- background particles ----------
+(function () {
+  const c = $("#bg"), x = c.getContext("2d");
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) { c.remove(); return; }
+  let w, h, P = [], m = { x: -999, y: -999 };
+  const rs = () => { w = c.width = innerWidth; h = c.height = innerHeight; P = Array.from({ length: Math.min(70, Math.floor(w * h / 18000)) }, () => ({ x: Math.random() * w, y: Math.random() * h, vx: (Math.random() - .5) * .3, vy: (Math.random() - .5) * .3 })); };
+  addEventListener("resize", rs); addEventListener("pointermove", e => { m.x = e.clientX; m.y = e.clientY; }); rs();
+  (function f() {
+    x.clearRect(0, 0, w, h);
+    for (const p of P) {
+      p.x += p.vx; p.y += p.vy; if (p.x < 0 || p.x > w) p.vx *= -1; if (p.y < 0 || p.y > h) p.vy *= -1;
+      const dx = p.x - m.x, dy = p.y - m.y, d = Math.hypot(dx, dy);
+      if (d > 0 && d < 110) { p.x += dx / d * 1.2; p.y += dy / d * 1.2; }
+      x.fillStyle = "rgba(140,130,255,.7)"; x.beginPath(); x.arc(p.x, p.y, 1.6, 0, 6.3); x.fill();
+    }
+    for (let i = 0; i < P.length; i++) for (let j = i + 1; j < P.length; j++) {
+      const d = Math.hypot(P[i].x - P[j].x, P[i].y - P[j].y);
+      if (d < 110) { x.strokeStyle = `rgba(124,108,255,${.18 * (1 - d / 110)})`; x.beginPath(); x.moveTo(P[i].x, P[i].y); x.lineTo(P[j].x, P[j].y); x.stroke(); }
+    }
+    requestAnimationFrame(f);
+  })();
+})();
+
+// ---------- installable app (PWA) ----------
+let installEvt = null;
+const showInst = on => $$(".inst").forEach(b => b.classList.toggle("hide", !on));
+addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; showInst(true); });
+$$(".inst").forEach(b => b.onclick = async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice; installEvt = null; showInst(false); });
+addEventListener("appinstalled", () => showInst(false));
+if (/iphone|ipad/i.test(navigator.userAgent) && !navigator.standalone) $("#ioshint").classList.remove("hide");
+if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(console.error));
