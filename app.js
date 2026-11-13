@@ -54,6 +54,7 @@ async function boot(user, checkRole) {
   go("ov");
   startRealtime();
   initUnread();
+  initDm(); startDmRealtime();
   if (notifOn() && "PushManager" in window) pushOn().catch(console.error);
 }
 (async () => { const { data } = await db.auth.getSession(); if (data.session) boot(data.session.user, false); })();
@@ -71,7 +72,7 @@ $("#scrim").onclick = () => toggleSide(false);
 function go(v) {
   $$("nav button").forEach(b => b.classList.toggle("on", b.dataset.v === v));
   $$("main > section").forEach(s => s.classList.toggle("hide", s.id !== "v-" + v));
-  ({ ov: loadOverview, chat: loadChat, files: loadFiles, gal: loadGallery, att: loadAttendance, mem: loadMembers, set: loadSettings, prof: loadProfile, acct: () => { loadProfile(); notifUI(); applyTheme(); $("#snd").checked = soundOn(); }, own: () => { loadMembers(); loadSettings(); } })[v]();
+  ({ ov: loadOverview, chat: loadChat, dm: loadDm, files: loadFiles, gal: loadGallery, att: loadAttendance, mem: loadMembers, set: loadSettings, prof: loadProfile, acct: () => { loadProfile(); notifUI(); applyTheme(); $("#snd").checked = soundOn(); }, own: () => { loadMembers(); loadSettings(); } })[v]();
 }
 
 // ---------- realtime ----------
@@ -196,7 +197,7 @@ async function sendMsg() {
   const type = !file ? "text" : file.type === "image/gif" ? "gif" : file.type.startsWith("image/") ? "image" : "file";
   $("#send").disabled = true;
   try {
-    const row = must(await db.from("messages").insert({ sender_id: me.id, content: (text || "📎 " + file.name).slice(0, 4000), message_type: type, reply_to_id: replyTo }).select().single());
+    const row = must(await db.from("messages").insert({ sender_id: me.id, content: (text || (file.name.startsWith("voice-note") ? "🎤 Voice note" : "📎 " + file.name)).slice(0, 4000), message_type: type, reply_to_id: replyTo }).select().single());
     $("#ci").value = ""; replyTo = null; $("#rp").classList.add("hide"); loadChat(); sndSend();
     if (file) {
       const path = `${me.id}/${Date.now()}-${safe(file.name)}`;
@@ -348,28 +349,6 @@ $("#pwf").onsubmit = async e => {
   e.target.reset(); toast("Password updated.");
 };
 
-// ---------- background particles ----------
-(function () {
-  const c = $("#bg"), x = c.getContext("2d");
-  if (matchMedia("(prefers-reduced-motion: reduce)").matches) { c.remove(); return; }
-  let w, h, P = [], m = { x: -999, y: -999 };
-  const rs = () => { w = c.width = innerWidth; h = c.height = innerHeight; P = Array.from({ length: Math.min(70, Math.floor(w * h / 18000)) }, () => ({ x: Math.random() * w, y: Math.random() * h, vx: (Math.random() - .5) * .3, vy: (Math.random() - .5) * .3 })); };
-  addEventListener("resize", rs); addEventListener("pointermove", e => { m.x = e.clientX; m.y = e.clientY; }); rs();
-  (function f() {
-    x.clearRect(0, 0, w, h);
-    for (const p of P) {
-      p.x += p.vx; p.y += p.vy; if (p.x < 0 || p.x > w) p.vx *= -1; if (p.y < 0 || p.y > h) p.vy *= -1;
-      const dx = p.x - m.x, dy = p.y - m.y, d = Math.hypot(dx, dy);
-      if (d > 0 && d < 110) { p.x += dx / d * 1.2; p.y += dy / d * 1.2; }
-      x.fillStyle = "rgba(140,130,255,.7)"; x.beginPath(); x.arc(p.x, p.y, 1.6, 0, 6.3); x.fill();
-    }
-    for (let i = 0; i < P.length; i++) for (let j = i + 1; j < P.length; j++) {
-      const d = Math.hypot(P[i].x - P[j].x, P[i].y - P[j].y);
-      if (d < 110) { x.strokeStyle = `rgba(124,108,255,${.18 * (1 - d / 110)})`; x.beginPath(); x.moveTo(P[i].x, P[i].y); x.lineTo(P[j].x, P[j].y); x.stroke(); }
-    }
-    requestAnimationFrame(f);
-  })();
-})();
 
 // ---------- installable app (PWA) ----------
 let installEvt = null;
@@ -424,7 +403,7 @@ $("#pf").onsubmit = async e => {
 };
 
 // ---------- version ----------
-const APP_VERSION = "V.01.01";
+const APP_VERSION = "V.01.02";
 $$(".ver").forEach(e => e.textContent = APP_VERSION);
 
 // ---------- local preferences ----------
@@ -434,7 +413,10 @@ const store = { get: k => { try { return localStorage.getItem(k); } catch (_) { 
 function applyTheme() {
   const ok = !me || can("change_theme");
   const t = ok ? store.get("nx_theme") || "dark" : "dark", a = ok ? store.get("nx_accent") || "purple" : "purple";
+  const sc = ok ? store.get("nx_scene") || "particles" : "particles";
   document.documentElement.dataset.theme = t; document.documentElement.dataset.accent = a;
+  queueMicrotask(() => setScene(sc));
+  $$("#scn button").forEach(b => b.classList.toggle("on", b.dataset.s === sc));
   $('meta[name="theme-color"]').content = t === "light" ? "#f3f5ff" : "#0a0d1c";
   $$("#thm button").forEach(b => b.classList.toggle("on", b.dataset.t === t));
   $$("#acc button").forEach(b => b.classList.toggle("on", b.dataset.a === a));
@@ -566,3 +548,231 @@ $$(".subtabs").forEach(t => t.addEventListener("click", e => {
   const b = e.target.closest("button[data-p]"); if (!b) return;
   [...t.children].forEach(x => { x.classList.toggle("on", x === b); $("#" + x.dataset.p).classList.toggle("hide", x !== b); });
 }));
+
+// ---------- interactive background scenes ----------
+const cv = $("#bg"), cx = cv.getContext("2d"), reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let W = 0, H = 0, sceneName = "", S = null, raf = 0, col = "#7c6cff", col2 = "#4aa3ff";
+const ptr = { x: -999, y: -999 }, R = (a, b) => b === undefined ? Math.random() * a : a + Math.random() * (b - a);
+function fit() { const d = Math.min(devicePixelRatio || 1, 2); W = innerWidth; H = innerHeight; cv.width = W * d; cv.height = H * d; cx.setTransform(d, 0, 0, d, 0, 0); if (sceneName) S = SC[sceneName] ? SC[sceneName]() : null; }
+addEventListener("resize", fit);
+addEventListener("pointermove", e => { ptr.x = e.clientX; ptr.y = e.clientY; if (S && S.move) S.move(); });
+addEventListener("pointerdown", e => { ptr.x = e.clientX; ptr.y = e.clientY; if (S && S.tap) S.tap(e.clientX, e.clientY); });
+const SC = {
+  particles() {
+    const P = Array.from({ length: Math.min(70, W * H / 18000 | 0) }, () => ({ x: R(W), y: R(H), vx: R(-.15, .15), vy: R(-.15, .15) }));
+    return {
+      tap(x, y) { P.forEach(p => { const d = Math.hypot(p.x - x, p.y - y); if (d < 160 && d > 0) { p.vx += (p.x - x) / d * 2; p.vy += (p.y - y) / d * 2; } }); },
+      draw() {
+        for (const p of P) {
+          p.vx *= .995; p.vy *= .995; p.x += p.vx; p.y += p.vy; if (p.x < 0 || p.x > W) p.vx *= -1; if (p.y < 0 || p.y > H) p.vy *= -1;
+          const dx = p.x - ptr.x, dy = p.y - ptr.y, d = Math.hypot(dx, dy); if (d > 0 && d < 110) { p.x += dx / d * 1.2; p.y += dy / d * 1.2; }
+          cx.globalAlpha = .7; cx.beginPath(); cx.arc(p.x, p.y, 1.6, 0, 6.3); cx.fill();
+        }
+        for (let i = 0; i < P.length; i++) for (let j = i + 1; j < P.length; j++) { const d = Math.hypot(P[i].x - P[j].x, P[i].y - P[j].y); if (d < 110) { cx.globalAlpha = .2 * (1 - d / 110); cx.beginPath(); cx.moveTo(P[i].x, P[i].y); cx.lineTo(P[j].x, P[j].y); cx.stroke(); } }
+      }
+    };
+  },
+  stars() {
+    const A = Array.from({ length: 140 }, () => ({ x: R(-1, 1), y: R(-1, 1), z: R(.05, 1) })); let boost = 0;
+    return {
+      tap() { boost = 70; },
+      draw() {
+        const mx = ptr.x > 0 ? ptr.x : W / 2, my = ptr.y > 0 ? ptr.y : H / 2, sp = .004 + (boost-- > 0 ? .03 : 0);
+        for (const s of A) {
+          s.z -= sp; if (s.z <= .02) { s.x = R(-1, 1); s.y = R(-1, 1); s.z = 1; }
+          const px = mx + s.x / s.z * W * .35, py = my + s.y / s.z * H * .35;
+          if (px < 0 || px > W || py < 0 || py > H) { s.z = 1; s.x = R(-1, 1); s.y = R(-1, 1); continue; }
+          cx.globalAlpha = Math.min(1, (1 - s.z) * 1.4); cx.beginPath(); cx.arc(px, py, (1 - s.z) * 2.4 + .3, 0, 6.3); cx.fill();
+        }
+      }
+    };
+  },
+  matrix() {
+    const cs = 18, ch = "01<>/=+*ABCDEFXYZ#$アイウエオカキクケコ", C = Array.from({ length: Math.ceil(W / cs) }, () => ({ y: R(-H, 0), v: R(1.5, 4) }));
+    return {
+      tap(x) { C.forEach((c, i) => { if (Math.abs(i * cs - x) < 150) c.y = Math.min(c.y, 0); }); },
+      draw() {
+        cx.font = "14px monospace";
+        C.forEach((c, i) => {
+          const x = i * cs, near = Math.abs(x - ptr.x) < 90; c.y += c.v * (near ? 3 : 1);
+          if (c.y - 12 * 16 > H) { c.y = R(-200, 0); c.v = R(1.5, 4); }
+          for (let k = 0; k < 12; k++) { cx.globalAlpha = (1 - k / 12) * (near ? .95 : .5); cx.fillText(ch[Math.abs((((c.y / 16) | 0) - k) * 31 + i * 17) % ch.length], x, c.y - k * 16); }
+        });
+      }
+    };
+  },
+  fireflies() {
+    const F = Array.from({ length: 45 }, () => ({ x: R(W), y: R(H), vx: R(-.5, .5), vy: R(-.5, .5), ph: R(6.3) }));
+    return {
+      tap(x, y) { F.forEach(f => { const a = Math.atan2(f.y - y, f.x - x); f.vx += Math.cos(a) * 4; f.vy += Math.sin(a) * 4; }); },
+      draw(t) {
+        for (const f of F) {
+          f.vx += R(-.05, .05); f.vy += R(-.05, .05); const dx = ptr.x - f.x, dy = ptr.y - f.y, d = Math.hypot(dx, dy);
+          if (d < 220 && d > 1) { f.vx += dx / d * .04; f.vy += dy / d * .04; }
+          f.vx *= .98; f.vy *= .98; f.x = (f.x + f.vx + W) % W; f.y = (f.y + f.vy + H) % H;
+          cx.globalAlpha = .35 + .55 * Math.sin(t / 500 + f.ph) ** 2; cx.shadowBlur = 14; cx.shadowColor = col; cx.beginPath(); cx.arc(f.x, f.y, 2.2, 0, 6.3); cx.fill();
+        }
+        cx.shadowBlur = 0;
+      }
+    };
+  },
+  bubbles() {
+    const mk = low => ({ x: R(W), y: low ? H + R(60) : R(H), r: R(8, 28), v: R(.3, 1) }); let pops = [];
+    const B = Array.from({ length: 26 }, () => mk(false));
+    return {
+      tap(x, y) { B.forEach((b, i) => { if (Math.hypot(b.x - x, b.y - y) < b.r + 8) { for (let k = 0; k < 8; k++) pops.push({ x: b.x, y: b.y, a: R(6.3), l: 1 }); B[i] = mk(true); } }); },
+      draw(t) {
+        for (const b of B) {
+          b.y -= b.v; b.x += Math.sin(t / 900 + b.r) * .3; const dx = b.x - ptr.x, dy = b.y - ptr.y, d = Math.hypot(dx, dy);
+          if (d < 90 && d > 0) { b.x += dx / d * 1.5; b.y += dy / d * 1.5; } if (b.y < -40) Object.assign(b, mk(true));
+          cx.globalAlpha = .55; cx.lineWidth = 1.5; cx.beginPath(); cx.arc(b.x, b.y, b.r, 0, 6.3); cx.stroke();
+          cx.globalAlpha = .25; cx.beginPath(); cx.arc(b.x - b.r * .35, b.y - b.r * .35, b.r * .22, 0, 6.3); cx.fill();
+        }
+        pops = pops.filter(p => p.l > 0); for (const p of pops) { p.x += Math.cos(p.a) * 2; p.y += Math.sin(p.a) * 2; p.l -= .04; cx.globalAlpha = p.l; cx.beginPath(); cx.arc(p.x, p.y, 2, 0, 6.3); cx.fill(); }
+      }
+    };
+  },
+  aurora() {
+    return {
+      draw(t) {
+        const mx = ptr.x > 0 ? ptr.x / W : .5, my = ptr.y > 0 ? ptr.y / H : .5;
+        for (let L = 0; L < 3; L++) {
+          cx.globalAlpha = .15; cx.lineWidth = 46 - L * 10; cx.strokeStyle = L === 1 ? col2 : col; cx.beginPath();
+          for (let x = 0; x <= W; x += 16) { const y = H * (.3 + L * .12) + Math.sin(x / 180 + t / 1600 * (1 + L * .4) + mx * 6) * (40 + my * 60) + Math.sin(x / 70 + t / 900) * 12; x ? cx.lineTo(x, y) : cx.moveTo(x, y); }
+          cx.stroke();
+        }
+      }
+    };
+  },
+  ripples() {
+    let rs = [], last = 0; const add = (x, y, big) => rs.push({ x, y, r: 4, big });
+    return {
+      tap: (x, y) => add(x, y, true),
+      move() { const n = performance.now(); if (n - last > 140) { last = n; add(ptr.x, ptr.y, false); } },
+      draw() {
+        rs = rs.filter(q => q.r < (q.big ? 200 : 90));
+        for (const q of rs) { q.r += q.big ? 3 : 1.6; cx.globalAlpha = Math.max(0, 1 - q.r / (q.big ? 200 : 90)) * .7; cx.lineWidth = 2; cx.beginPath(); cx.arc(q.x, q.y, q.r, 0, 6.3); cx.stroke(); }
+      }
+    };
+  }
+};
+function loop(t) {
+  raf = requestAnimationFrame(loop); cx.clearRect(0, 0, W, H);
+  if (!S || document.hidden) return;
+  cx.fillStyle = cx.strokeStyle = col; cx.lineWidth = 1; S.draw(t); cx.globalAlpha = 1;
+}
+function setScene(n) {
+  const cs = getComputedStyle(document.documentElement); col = cs.getPropertyValue("--ac").trim() || col; col2 = cs.getPropertyValue("--ac2").trim() || col2;
+  if (n === sceneName) return;
+  sceneName = n; cancelAnimationFrame(raf); cx.clearRect(0, 0, W, H);
+  if (reduceMotion || !SC[n]) { S = null; return; }
+  S = SC[n](); raf = requestAnimationFrame(loop);
+}
+fit();
+const SCENE_ACC = { stars: "purple", matrix: "green", fireflies: "amber", bubbles: "cyan", aurora: "blue", ripples: "pink" };
+$("#scn").onclick = e => { const k = e.target.dataset.s; if (!k || !can("change_theme")) return; store.set("nx_scene", k); if (SCENE_ACC[k]) store.set("nx_accent", SCENE_ACC[k]); applyTheme(); };
+
+// ---------- voice notes ----------
+let recS = null;
+async function micToggle(btn, setFile) {
+  if (recS) { recS.stop(); return; }
+  if (!navigator.mediaDevices || !window.MediaRecorder) return toast("Voice recording is not supported in this browser.");
+  let stream; try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch (_) { return toast("Allow the microphone to record a voice note."); }
+  const mime = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"].find(t => MediaRecorder.isTypeSupported(t)) || "";
+  const mr = new MediaRecorder(stream, mime ? { mimeType: mime } : {}), chunks = []; let sec = 0;
+  mr.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  const tick = setInterval(() => { sec++; btn.textContent = `⏹ ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`; if (sec >= 180) mr.stop(); }, 1000);
+  mr.onstop = () => {
+    clearInterval(tick); stream.getTracks().forEach(t => t.stop()); recS = null; btn.textContent = "🎤"; btn.classList.remove("rec");
+    const type = (mr.mimeType || mime || "audio/webm").split(";")[0], ext = type.includes("mp4") ? "m4a" : type.includes("ogg") ? "ogg" : "webm";
+    if (chunks.length) setFile(new File([new Blob(chunks, { type })], "voice-note." + ext, { type }));
+  };
+  recS = mr; mr.start(); btn.textContent = "⏹ 0:00"; btn.classList.add("rec");
+}
+const putFile = (inp, lbl, f) => { const dt = new DataTransfer(); dt.items.add(f); $(inp).files = dt.files; $(lbl).textContent = "🎤 Voice note ready (tap here to remove). Press Send."; };
+$("#cmic").onclick = () => micToggle($("#cmic"), f => putFile("#cf", "#cfn", f));
+$("#dmic").onclick = () => micToggle($("#dmic"), f => putFile("#dmf", "#dmfn", f));
+$("#cfn").onclick = () => { $("#cf").value = ""; $("#cfn").textContent = ""; };
+$("#dmfn").onclick = () => { $("#dmf").value = ""; $("#dmfn").textContent = ""; };
+
+// ---------- direct messages ----------
+let dmWith = null, dmUnread = 0, dmCache = {}, dmUrl = {}, dmBusy = false;
+function setDmUnread(n) { dmUnread = n; const b = $("#db"); b.textContent = n > 99 ? "99+" : n; b.classList.toggle("hide", !n); }
+async function initDm() { const r = await db.from("dm_messages").select("id", { count: "exact", head: true }).eq("recipient_id", me.id).is("read_at", null); setDmUnread(r.count || 0); }
+async function dmUrls(rows) {
+  const need = rows.filter(r => r.att_path && !(dmUrl[r.att_path] && dmUrl[r.att_path].exp > Date.now()));
+  if (!need.length) return;
+  const sg = await db.storage.from("dm-attachments").createSignedUrls(need.map(r => r.att_path), 3600);
+  (sg.data || []).forEach(u => { if (u.signedUrl) dmUrl[u.path] = { url: u.signedUrl, exp: Date.now() + 3300000 }; });
+}
+async function loadDm() {
+  await loadPeople();
+  const rows = must(await db.from("dm_messages").select("sender_id,recipient_id,content,message_type,created_at,read_at").order("created_at", { ascending: false }).limit(400));
+  const last = {}, unread = {};
+  rows.forEach(r => { const o = r.sender_id === me.id ? r.recipient_id : r.sender_id; if (!last[o]) last[o] = r; if (r.recipient_id === me.id && !r.read_at) unread[o] = (unread[o] || 0) + 1; });
+  setDmUnread(Object.values(unread).reduce((a, b) => a + b, 0));
+  const when = p => last[p.id] ? new Date(last[p.id].created_at).getTime() : 0;
+  const list = Object.values(people).filter(p => p.is_enabled && p.id !== me.id).sort((a, b) => when(b) - when(a) || a.display_name.localeCompare(b.display_name));
+  $("#dmlist").innerHTML = list.length ? list.map(p => {
+    const l = last[p.id], pv = l ? (l.message_type === "voice" ? "🎤 Voice note" : l.content || "📎 File") : "Say hi";
+    return `<div class="mem dmrow ${p.id === dmWith ? "on" : ""}" data-u="${p.id}">${av(p, 40)}<div><b>${esc(p.display_name)}</b><small class="mut">${esc(pv.slice(0, 40))}</small></div>${unread[p.id] ? `<span class="bdg">${unread[p.id]}</span>` : ""}</div>`;
+  }).join("") : `<p class="mut">No other members yet.</p>`;
+}
+async function openDm(uid) {
+  dmWith = uid; $("#dmwrap").classList.add("open"); $("#dmname").textContent = nm(uid);
+  await drawDm(false); await db.rpc("ah_mark_dm_read", { p_other: uid }); loadDm();
+}
+async function drawDm(keep) {
+  if (!dmWith || dmBusy) return; dmBusy = true;
+  try {
+    const o = dmWith, f = `and(sender_id.eq.${me.id},recipient_id.eq.${o}),and(sender_id.eq.${o},recipient_id.eq.${me.id})`;
+    const rows = must(await db.from("dm_messages").select("*").or(f).order("created_at", { ascending: false }).limit(100)).reverse();
+    await dmUrls(rows); dmCache = {}; rows.forEach(r => dmCache[r.id] = r);
+    const box = $("#dmmsgs"), stick = !keep || box.scrollTop + box.clientHeight >= box.scrollHeight - 40;
+    box.innerHTML = rows.length ? rows.map(r => {
+      const mine = r.sender_id === me.id, md = r.att_path ? media(dmUrl[r.att_path] && dmUrl[r.att_path].url, r.att_mime, r.att_name) : "";
+      return `<div class="m ${mine ? "mine" : "other"}">${mine ? "" : av(people[r.sender_id], 30)}<div class="bub"><small>${new Date(r.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</small>${r.content ? `<div>${esc(r.content)}</div>` : ""}${md}${mine ? `<div class="acts"><button data-d="${r.id}">Delete</button></div>` : ""}</div></div>`;
+    }).join("") : `<p class="mut">No messages yet. Say hello to ${esc(nm(o))}.</p>`;
+    if (stick) box.scrollTop = box.scrollHeight;
+  } finally { dmBusy = false; }
+}
+$("#dmlist").onclick = e => { const r = e.target.closest("[data-u]"); if (r) openDm(r.dataset.u); };
+$("#dmback").onclick = () => { $("#dmwrap").classList.remove("open"); dmWith = null; loadDm(); };
+$("#dmmsgs").onclick = async e => {
+  const d = e.target.dataset.d; if (!d || !confirm("Delete this message?")) return;
+  const r = dmCache[d]; must(await db.from("dm_messages").delete().eq("id", d).select());
+  if (r && r.att_path) await db.storage.from("dm-attachments").remove([r.att_path]);
+  drawDm(true);
+};
+$("#dmf").onchange = () => { const f = $("#dmf").files[0]; $("#dmfn").textContent = f ? "Attached: " + f.name + " (tap here to remove)" : ""; };
+async function sendDm() {
+  const file = $("#dmf").files[0], text = $("#dmi").value.trim();
+  if (!dmWith) return toast("Pick a member first.");
+  if (!text && !file) return;
+  if (file && file.size > 50 * MB) return toast("Attachment must be 50 MB or smaller.");
+  $("#dmsend").disabled = true;
+  try {
+    const row = { sender_id: me.id, recipient_id: dmWith, content: text.slice(0, 4000), message_type: "text" };
+    if (file) {
+      const path = `${me.id}/${dmWith}/${Date.now()}-${safe(file.name)}`, mime = file.type || "application/octet-stream";
+      must(await db.storage.from("dm-attachments").upload(path, file, { contentType: mime }));
+      Object.assign(row, { att_path: path, att_name: file.name, att_mime: mime, att_size: file.size, message_type: file.name.startsWith("voice-note") ? "voice" : mime.startsWith("image/") ? "image" : "file" });
+    }
+    must(await db.from("dm_messages").insert(row).select());
+    $("#dmi").value = ""; $("#dmf").value = ""; $("#dmfn").textContent = ""; sndSend(); drawDm(true); loadDm();
+  } finally { $("#dmsend").disabled = false; }
+}
+$("#dmsend").onclick = sendDm;
+$("#dmi").onkeydown = e => { if (e.key === "Enter") sendDm(); };
+function startDmRealtime() {
+  db.channel("hub-dm").on("postgres_changes", { event: "*", schema: "public", table: "dm_messages" }, p => {
+    const r = p.new || {}, incoming = p.eventType === "INSERT" && r.recipient_id === me.id, open = !$("#v-dm").classList.contains("hide");
+    if (incoming) {
+      sndRecv();
+      const viewing = open && dmWith === r.sender_id && !document.hidden;
+      if (viewing) db.rpc("ah_mark_dm_read", { p_other: r.sender_id });
+      else { notify(nm(r.sender_id), r.message_type === "voice" ? "🎤 Voice note" : (r.content || "📎 File").slice(0, 120), "dm-" + r.id); if (!open) setDmUnread(dmUnread + 1); }
+    }
+    if (open) { loadDm(); drawDm(true); }
+  }).subscribe();
+}
