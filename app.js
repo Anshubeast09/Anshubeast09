@@ -36,7 +36,7 @@ $("#lf").onsubmit = async e => {
   if (error) return toast(error.message);
   await boot(data.user, true);
 };
-$("#out").onclick = async () => { await db.auth.signOut(); location.reload(); };
+$("#out").onclick = async () => { await pushDropDb().catch(() => {}); await db.auth.signOut(); location.reload(); };
 
 async function boot(user, checkRole) {
   const { data: p, error } = await db.from("profiles").select("*").eq("id", user.id).single();
@@ -53,6 +53,7 @@ async function boot(user, checkRole) {
   go("ov");
   startRealtime();
   initUnread();
+  if (notifOn() && "PushManager" in window) pushOn().catch(console.error);
 }
 (async () => { const { data } = await db.auth.getSession(); if (data.session) boot(data.session.user, false); })();
 
@@ -69,7 +70,7 @@ $("#scrim").onclick = () => toggleSide(false);
 function go(v) {
   $$("nav button").forEach(b => b.classList.toggle("on", b.dataset.v === v));
   $$("main > section").forEach(s => s.classList.toggle("hide", s.id !== "v-" + v));
-  ({ ov: loadOverview, chat: loadChat, files: loadFiles, gal: loadGallery, att: loadAttendance, mem: loadMembers, set: loadSettings, prof: loadProfile, acct: () => { notifUI(); applyTheme(); } })[v]();
+  ({ ov: loadOverview, chat: loadChat, files: loadFiles, gal: loadGallery, att: loadAttendance, mem: loadMembers, set: loadSettings, prof: loadProfile, acct: () => { notifUI(); applyTheme(); $("#snd").checked = soundOn(); } })[v]();
 }
 
 // ---------- realtime ----------
@@ -183,7 +184,7 @@ async function sendMsg() {
   $("#send").disabled = true;
   try {
     const row = must(await db.from("messages").insert({ sender_id: me.id, content: (text || "📎 " + file.name).slice(0, 4000), message_type: type, reply_to_id: replyTo }).select().single());
-    $("#ci").value = ""; replyTo = null; $("#rp").classList.add("hide"); loadChat();
+    $("#ci").value = ""; replyTo = null; $("#rp").classList.add("hide"); loadChat(); sndSend();
     if (file) {
       const path = `${me.id}/${Date.now()}-${safe(file.name)}`;
       must(await db.storage.from("chat-attachments").upload(path, file, { contentType: file.type || "application/octet-stream" }));
@@ -450,6 +451,7 @@ function notify(title, body, tag) {
 }
 function onNewMsg(m) {
   if (!me || !can("chat") || m.sender_id === me.id) return;
+  sndRecv();
   if (!$("#v-chat").classList.contains("hide") && !document.hidden) return;
   setUnread(unread + 1);
   notify(mentionsMe(m.content) ? `${nm(m.sender_id)} mentioned you` : nm(m.sender_id), (m.content || "").slice(0, 120), "nx-" + m.id);
@@ -457,16 +459,17 @@ function onNewMsg(m) {
 document.addEventListener("visibilitychange", () => { if (!document.hidden && me && !$("#v-chat").classList.contains("hide")) markSeen(); });
 function notifUI() {
   const st = $("#nstat"), b = $("#nbtn");
-  if (!("Notification" in window)) { st.textContent = "This browser does not support notifications."; b.classList.add("hide"); return; }
+  if (!("Notification" in window)) { st.textContent = "This browser does not support notifications. On iPhone, add the app to the Home Screen first."; b.classList.add("hide"); return; }
   const on = notifOn(), denied = Notification.permission === "denied";
-  st.textContent = denied ? "Blocked. Allow notifications for this site in browser settings." : on ? "On: you get a notification for every new message while NEXORA is open or running in the background." : "Off.";
+  st.textContent = denied ? "Blocked. Allow notifications for this site in browser settings." : on ? "On: you get a notification for every new message, even when the app is closed." : "Off.";
   b.textContent = on ? "Turn off" : "Enable notifications"; b.disabled = denied;
 }
 $("#nbtn").onclick = async () => {
-  if (notifOn()) { store.set("nx_notif", "0"); return notifUI(); }
+  if (notifOn()) { store.set("nx_notif", "0"); await pushOff().catch(() => {}); return notifUI(); }
   const p = await Notification.requestPermission();
-  store.set("nx_notif", p === "granted" ? "1" : "0"); notifUI();
-  if (p === "granted") notify("NEXORA", "Notifications are on.", "nx-test");
+  store.set("nx_notif", p === "granted" ? "1" : "0");
+  if (p === "granted") { try { await pushOn(); } catch (e) { toast("Push setup failed: " + (e.message || e)); } notify("NEXORA", "Notifications are on.", "nx-test"); }
+  notifUI();
 };
 
 // ---------- chat edit / delete / search ----------
@@ -492,3 +495,44 @@ $("#csearch").onkeydown = async e => {
     d.map(x => `<div class="sr"><b>${esc(nm(x.sender_id))}</b> <small class="mut">${new Date(x.created_at).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}</small><div>${esc(x.content)}</div></div>`).join("");
 };
 $("#csearch").oninput = e => { if (!e.target.value && searching) { searching = false; loadChat(); } };
+
+// ---------- web push (works when the app is closed) ----------
+const VAPID_PUBLIC = "BLaZa8XZu3ozfv5d8lrMU74yJPwChKRfcxXI2sbTa0qSrtZyO_A_-83maNK_WXhtScSB81nyw7bW4NeNgdkqiY0";
+const b64 = v => Uint8Array.from(atob((v + "=".repeat((4 - v.length % 4) % 4)).replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
+async function pushOn() {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) throw new Error("Push is not supported here. On iPhone, add the app to the Home Screen.");
+  const reg = await navigator.serviceWorker.ready;
+  const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(VAPID_PUBLIC) });
+  const k = sub.toJSON();
+  must(await db.rpc("ah_save_push_sub", { p_endpoint: k.endpoint, p_p256dh: k.keys.p256dh, p_auth: k.keys.auth }));
+}
+async function pushDropDb() {
+  if (!("serviceWorker" in navigator)) return;
+  const sub = await (await navigator.serviceWorker.ready).pushManager.getSubscription();
+  if (sub) await db.rpc("ah_remove_push_sub", { p_endpoint: sub.endpoint });
+}
+async function pushOff() {
+  const sub = await (await navigator.serviceWorker.ready).pushManager.getSubscription();
+  if (sub) { await db.rpc("ah_remove_push_sub", { p_endpoint: sub.endpoint }); await sub.unsubscribe(); }
+}
+
+// ---------- sounds ----------
+let actx = null;
+const soundOn = () => store.get("nx_sound") !== "0";
+const AC = window.AudioContext || window.webkitAudioContext;
+addEventListener("pointerdown", () => { try { actx = actx || new AC(); actx.resume(); } catch (_) {} }, { once: true });
+function tone(seq) {
+  if (!soundOn() || !AC) return;
+  try {
+    actx = actx || new AC(); if (actx.state === "suspended") actx.resume();
+    let t = actx.currentTime;
+    for (const [f, d] of seq) {
+      const o = actx.createOscillator(), g = actx.createGain(); o.type = "sine"; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.18, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+      o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t + d + 0.02); t += d * 0.8;
+    }
+  } catch (_) {}
+}
+const sndSend = () => tone([[660, 0.09], [880, 0.09]]);
+const sndRecv = () => tone([[880, 0.12], [1175, 0.16]]);
+$("#snd").onchange = e => { store.set("nx_sound", e.target.checked ? "1" : "0"); if (e.target.checked) sndRecv(); };
