@@ -1,13 +1,14 @@
 <!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Aadarsh Hub</title>
+<title>NEXORA</title>
 <meta name="theme-color" content="#0a0d1c">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon-192.png">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="icon" href="icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Aadarsh Hub">
+<meta name="apple-mobile-web-app-title" content="NEXORA">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
@@ -17,12 +18,14 @@
 <div id="toast" role="status"></div>
 
 <section id="landing" class="center">
-  <div class="logo big">AH</div>
+  <img class="logo big" src="logo.svg" alt="NEXORA logo">
+  <div class="word">NEXORA</div>
   <h1>One hub. Our universe.</h1>
   <p class="mut">A private community for friends. Founded by Aadarsh Prajapati.</p>
   <button class="btn" id="enter">Enter the Hub</button>
   <button class="btn alt inst hide">Install app</button>
   <p id="ioshint" class="mut hide">On iPhone: tap Share, then Add to Home Screen.</p>
+  <small class="mut ver"></small>
 </section>
 
 <section id="login" class="center hide">
@@ -39,7 +42,7 @@
 <div id="app" class="hide">
   <div id="scrim" class="hide"></div>
   <aside id="side">
-    <div class="logo">AH</div>
+    <div class="brand"><img class="logo" src="logo.svg" alt="NEXORA logo"><b>NEXORA</b></div>
     <div id="chip" class="chip"></div>
     <nav>
       <button data-v="ov" class="on">Overview</button>
@@ -53,9 +56,10 @@
       <button data-v="set" class="own">Chat Settings</button>
     </nav>
     <button class="link inst hide">Install app</button>
+    <small class="mut ver"></small>
     <button class="link" id="out">Sign out</button>
   </aside>
-  <header id="top"><button id="burger" class="btn alt">Menu</button><b>Aadarsh Hub</b><span id="topav"></span></header>
+  <header id="top"><button id="burger" class="btn alt">Menu</button><span class="brand"><img class="logo sm" src="logo.svg" alt=""><b>NEXORA</b></span><span id="topav"></span></header>
   <main>
 
     <section id="v-ov">
@@ -115,6 +119,7 @@
 
     <section id="v-acct" class="hide">
       <h2>Settings</h2>
+      <p class="mut">NEXORA <span class="ver"></span></p>
       <form id="pwf" class="card narrow">
         <h2>Change password</h2>
         <input id="p0" type="password" placeholder="Current password" required autocomplete="current-password">
