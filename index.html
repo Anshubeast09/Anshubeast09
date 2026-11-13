@@ -1,17 +1,28 @@
 <!DOCTYPE html>
 <html lang="en"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Aadarsh Hub</title>
+<meta name="theme-color" content="#0a0d1c">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Aadarsh Hub">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 </head><body>
-<div id="toast"></div>
+<canvas id="bg" aria-hidden="true"></canvas>
+<div id="toast" role="status"></div>
 
 <section id="landing" class="center">
   <div class="logo big">AH</div>
   <h1>One hub. Our universe.</h1>
   <p class="mut">A private community for friends. Founded by Aadarsh Prajapati.</p>
   <button class="btn" id="enter">Enter the Hub</button>
+  <button class="btn alt inst hide">Install app</button>
+  <p id="ioshint" class="mut hide">On iPhone: tap Share, then Add to Home Screen.</p>
 </section>
 
 <section id="login" class="center hide">
@@ -37,6 +48,7 @@
       <button data-v="mem" class="own">Members</button>
       <button data-v="set" class="own">Chat Settings</button>
     </nav>
+    <button class="link inst hide">Install app</button>
     <button class="link" id="out">Sign out</button>
   </aside>
   <main>
