@@ -74,3 +74,33 @@ main{padding-bottom:max(22px,env(safe-area-inset-bottom))}
   .row .btn{flex:1;text-align:center}
   .mrow input[type=number]{width:80px}
 }
+
+/* ---- v3: chat bubbles, mobile header, profile ---- */
+.m{display:flex;gap:8px;align-items:flex-end;border:0;padding:5px 0}
+.m.pin{border-left:0;padding-left:0}
+.m.mine{flex-direction:row-reverse}
+.bub{max-width:min(80%,520px);padding:8px 12px;border-radius:16px;background:#1b2150;border:1px solid var(--line);overflow-wrap:anywhere}
+.other .bub{border-bottom-left-radius:4px}
+.mine .bub{background:linear-gradient(135deg,#6a5cf5,#3f8cf0);border-color:transparent;border-bottom-right-radius:4px}
+.mine .bub b{color:#fff}.mine .bub small,.mine .q{color:#dde2ff;border-color:rgba(255,255,255,.4)}
+.mine .acts{justify-content:flex-end}
+.mine .acts button{background:rgba(255,255,255,.18);border-color:transparent;color:#fff}
+.mine .acts button.me{background:#fff;color:#2a2f6b}
+.m.pin .bub{outline:2px solid #ffd166}
+.av{width:var(--s,34px);height:var(--s,34px);border-radius:50%;object-fit:cover;flex:none;background:linear-gradient(135deg,var(--ac),var(--ac2));display:inline-grid;place-items:center;font-weight:700;font-size:calc(var(--s,34px)*.42);color:#fff}
+.chip{display:flex;gap:10px;align-items:center;padding:8px;background:var(--card);border-radius:12px}
+.chip small{display:block;color:var(--mut);text-transform:capitalize}
+.narrow label:not(.btn):not(.row){display:flex;flex-direction:column;gap:4px;color:var(--mut);font-size:.85em}
+#top,#scrim{display:none}
+#side{overflow-y:auto}
+@media(max-width:760px){
+  #app{flex-direction:column}
+  #top{display:flex;align-items:center;justify-content:space-between;gap:10px;position:sticky;top:0;z-index:4;padding:max(8px,env(safe-area-inset-top)) 14px 8px;background:rgba(12,16,48,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  #burger{position:static;padding:8px 14px}
+  #scrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:4}
+  #scrim.hide{display:none}
+  #side{height:100dvh;z-index:5}
+  main{padding-top:14px}
+  #msgs{height:calc(100dvh - 330px)}
+  .bub{max-width:86%}
+}
