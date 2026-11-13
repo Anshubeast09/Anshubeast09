@@ -7,7 +7,7 @@ const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAl
 const esc = t => String(t ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const MB = 1048576, EMOJI = ["👍", "❤️", "😂"];
 const PERMS = ["chat", "upload_files", "view_gallery", "upload_gallery", "change_theme"];
-let me = null, people = {}, roleSel = "member", replyTo = null, msgCache = {}, rxCache = [], online = 0, timer, urlCache = {}, busy = false, again = false;
+let me = null, people = {}, roleSel = "member", replyTo = null, msgCache = {}, rxCache = [], online = 0, onlineIds = new Set(), timer, urlCache = {}, busy = false, again = false;
 
 function toast(m) { const t = $("#toast"); t.textContent = m; t.classList.add("show"); clearTimeout(timer); timer = setTimeout(() => t.classList.remove("show"), 4000); }
 function must(r) { if (r.error) { console.error(r.error); toast(r.error.message); throw r.error; } return r.data; }
@@ -50,6 +50,7 @@ async function boot(user, checkRole) {
   page("app");
   await loadPeople();
   paintMe();
+  paintStorage();
   go("ov");
   startRealtime();
   initUnread();
@@ -70,14 +71,14 @@ $("#scrim").onclick = () => toggleSide(false);
 function go(v) {
   $$("nav button").forEach(b => b.classList.toggle("on", b.dataset.v === v));
   $$("main > section").forEach(s => s.classList.toggle("hide", s.id !== "v-" + v));
-  ({ ov: loadOverview, chat: loadChat, files: loadFiles, gal: loadGallery, att: loadAttendance, mem: loadMembers, set: loadSettings, prof: loadProfile, acct: () => { notifUI(); applyTheme(); $("#snd").checked = soundOn(); } })[v]();
+  ({ ov: loadOverview, chat: loadChat, files: loadFiles, gal: loadGallery, att: loadAttendance, mem: loadMembers, set: loadSettings, prof: loadProfile, acct: () => { loadProfile(); notifUI(); applyTheme(); $("#snd").checked = soundOn(); }, own: () => { loadMembers(); loadSettings(); } })[v]();
 }
 
 // ---------- realtime ----------
 let rt = null;
 function startRealtime() {
   const pr = db.channel("hub-presence", { config: { presence: { key: me.id } } });
-  pr.on("presence", { event: "sync" }, () => { online = Object.keys(pr.presenceState()).length; if (!$("#v-ov").classList.contains("hide")) loadOverview(); })
+  pr.on("presence", { event: "sync" }, () => { onlineIds = new Set(Object.keys(pr.presenceState())); online = onlineIds.size; if (!$("#v-ov").classList.contains("hide")) paintMembers(); })
     .subscribe(s => { if (s === "SUBSCRIBED") pr.track({ name: me.display_name, at: Date.now() }); });
   const ch = db.channel("hub-messages");
   ["messages", "chat_reactions", "chat_attachments"].forEach(t =>
@@ -89,11 +90,23 @@ function startRealtime() {
 }
 
 // ---------- overview ----------
+function setStorage(used) {
+  const lim = me.storage_limit_bytes || 0, pct = lim ? Math.min(100, used / lim * 100) : 0;
+  $("#stor").innerHTML = `<div class="row"><small>Storage</small><small>${size(used)} of ${size(lim)}</small></div><div class="bar"><i style="width:${pct}%"></i></div>`;
+}
+async function paintStorage() { setStorage(await usedBytes()); }
+function paintMembers() {
+  const list = Object.values(people).filter(p => p.is_enabled).sort((a, b) => (onlineIds.has(b.id) - onlineIds.has(a.id)) || a.display_name.localeCompare(b.display_name));
+  $("#mcount").textContent = `${list.length} members · ${onlineIds.size} online`;
+  $("#mlist2").innerHTML = list.map(p => `<div class="mem">${av(p, 38)}<div><b>${esc(p.display_name)}${p.id === me.id ? " (you)" : ""}</b><small class="mut">${p.role === "owner" ? "Owner" : "Member"}${p.bio ? " · " + esc(p.bio) : ""}</small></div><span class="dot ${onlineIds.has(p.id) ? "on" : ""}" title="${onlineIds.has(p.id) ? "Online" : "Offline"}"></span></div>`).join("");
+}
 async function loadOverview() {
-  $("#hi").textContent = `Welcome, ${me.display_name}`;
-  const used = await usedBytes();
-  const cards = [["Role", me.role], ["Online now", online], ["Storage used", `${size(used)} of ${size(me.storage_limit_bytes || 0)}`]];
-  $("#stats").innerHTML = cards.map(c => `<div class="card"><small class="mut">${c[0]}</small><h2>${esc(c[1])}</h2></div>`).join("");
+  $("#hi").textContent = `Welcome, ${nm(me.id)}`;
+  await loadPeople(); paintMembers(); paintStorage();
+  if (!can("chat")) { $("#cprev").textContent = "You do not have chat access."; return; }
+  const q = await db.from("messages").select("sender_id,content").order("created_at", { ascending: false }).limit(1);
+  const m = q.data && q.data[0];
+  $("#cprev").innerHTML = m ? `<b>${esc(nm(m.sender_id))}:</b> ${esc(m.content.slice(0, 90))}` : "No messages yet.";
 }
 
 // ---------- chat ----------
@@ -209,6 +222,7 @@ async function loadFiles() {
   const l = await listFolder("member-files", me.id);
   const used = l.reduce((s, f) => s + ((f.metadata && f.metadata.size) || 0), 0);
   $("#quota").textContent = `Using ${size(used)} of ${size(me.storage_limit_bytes || 0)}`;
+  setStorage(used);
   $("#flist").innerHTML = l.length ? l.map(f => `<div><span>${esc(f.name.replace(/^\d+-/, ""))} <small class="mut">${size(f.metadata.size || 0)}</small></span>
     <span><button class="btn alt" data-o="${esc(f.name)}">Open</button> <button class="btn alt" data-d="${esc(f.name)}">Delete</button></span></div>`).join("") : `<p class="mut">No files yet. Upload your first one.</p>`;
 }
@@ -433,8 +447,8 @@ applyTheme();
 // ---------- unread + notifications ----------
 let unread = 0, searching = false;
 const seenKey = () => "nx_seen_" + me.id;
-function setUnread(n) { unread = n; const b = $("#cb"); b.textContent = n > 99 ? "99+" : n; b.classList.toggle("hide", !n); document.title = (n ? `(${n}) ` : "") + "NEXORA"; }
-function markSeen() { store.set(seenKey(), new Date().toISOString()); setUnread(0); }
+function setUnread(n) { unread = n; const b = $("#cb"); b.textContent = n > 99 ? "99+" : n; b.classList.toggle("hide", !n); document.title = (n ? `(${n}) ` : "") + "NEXORA"; if (navigator.setAppBadge) (n ? navigator.setAppBadge(n) : navigator.clearAppBadge()).catch(() => {}); }
+function markSeen() { store.set(seenKey(), new Date().toISOString()); setUnread(0); clearNotifs(); }
 async function initUnread() {
   if (!can("chat")) return;
   const last = store.get(seenKey()); if (!last) return markSeen();
@@ -454,7 +468,7 @@ function onNewMsg(m) {
   sndRecv();
   if (!$("#v-chat").classList.contains("hide") && !document.hidden) return;
   setUnread(unread + 1);
-  notify(mentionsMe(m.content) ? `${nm(m.sender_id)} mentioned you` : nm(m.sender_id), (m.content || "").slice(0, 120), "nx-" + m.id);
+  if (!pushActive) notify(mentionsMe(m.content) ? `${nm(m.sender_id)} mentioned you` : nm(m.sender_id), (m.content || "").slice(0, 120), "nx-" + m.id);
 }
 document.addEventListener("visibilitychange", () => { if (!document.hidden && me && !$("#v-chat").classList.contains("hide")) markSeen(); });
 function notifUI() {
@@ -463,6 +477,7 @@ function notifUI() {
   const on = notifOn(), denied = Notification.permission === "denied";
   st.textContent = denied ? "Blocked. Allow notifications for this site in browser settings." : on ? "On: you get a notification for every new message, even when the app is closed." : "Off.";
   b.textContent = on ? "Turn off" : "Enable notifications"; b.disabled = denied;
+  if (on && "serviceWorker" in navigator && "PushManager" in window) navigator.serviceWorker.ready.then(x => x.pushManager.getSubscription()).then(sb => { st.textContent += sb ? " This device is registered for push." : " This device is NOT registered for push yet: tap Turn off, then Enable again."; });
 }
 $("#nbtn").onclick = async () => {
   if (notifOn()) { store.set("nx_notif", "0"); await pushOff().catch(() => {}); return notifUI(); }
@@ -505,6 +520,7 @@ async function pushOn() {
   const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(VAPID_PUBLIC) });
   const k = sub.toJSON();
   must(await db.rpc("ah_save_push_sub", { p_endpoint: k.endpoint, p_p256dh: k.keys.p256dh, p_auth: k.keys.auth }));
+  pushActive = true;
 }
 async function pushDropDb() {
   if (!("serviceWorker" in navigator)) return;
@@ -514,6 +530,7 @@ async function pushDropDb() {
 async function pushOff() {
   const sub = await (await navigator.serviceWorker.ready).pushManager.getSubscription();
   if (sub) { await db.rpc("ah_remove_push_sub", { p_endpoint: sub.endpoint }); await sub.unsubscribe(); }
+  pushActive = false;
 }
 
 // ---------- sounds ----------
@@ -536,3 +553,16 @@ function tone(seq) {
 const sndSend = () => tone([[660, 0.09], [880, 0.09]]);
 const sndRecv = () => tone([[880, 0.12], [1175, 0.16]]);
 $("#snd").onchange = e => { store.set("nx_sound", e.target.checked ? "1" : "0"); if (e.target.checked) sndRecv(); };
+
+// ---------- WhatsApp-style notification helpers ----------
+let pushActive = false;
+function clearNotifs() {
+  if ("serviceWorker" in navigator) navigator.serviceWorker.ready.then(r => r.getNotifications({ tag: "nx-chat" })).then(l => l.forEach(n => n.close())).catch(() => {});
+}
+
+// ---------- dashboard shortcuts & settings sub-tabs ----------
+document.addEventListener("click", e => { const g = e.target.closest("[data-go]"); if (g) go(g.dataset.go); });
+$$(".subtabs").forEach(t => t.addEventListener("click", e => {
+  const b = e.target.closest("button[data-p]"); if (!b) return;
+  [...t.children].forEach(x => { x.classList.toggle("on", x === b); $("#" + x.dataset.p).classList.toggle("hide", x !== b); });
+}));
