@@ -104,3 +104,33 @@ main{padding-bottom:max(22px,env(safe-area-inset-bottom))}
   #msgs{height:calc(100dvh - 330px)}
   .bub{max-width:86%}
 }
+
+/* ---- v4: NEXORA branding ---- */
+.logo{background:none;border-radius:0;display:block;object-fit:contain}
+.logo.sm{width:30px;height:30px}
+.brand{display:flex;align-items:center;gap:10px;font-family:"Space Grotesk",sans-serif;letter-spacing:.08em}
+.word{font-family:"Space Grotesk",sans-serif;font-weight:700;letter-spacing:.35em;color:var(--mut);margin-top:-6px}
+#side .ver,#landing .ver{font-size:.75em}
+
+/* ---- v5: themes, badge, search, mentions ---- */
+:root[data-accent="blue"]{--ac:#3b82f6;--ac2:#22d3ee}
+:root[data-accent="green"]{--ac:#10b981;--ac2:#84cc16}
+:root[data-accent="pink"]{--ac:#ec4899;--ac2:#f59e0b}
+.mine .bub{background:linear-gradient(135deg,var(--ac),var(--ac2))}
+.sw{width:34px;height:34px;border-radius:50%;border:2px solid transparent;cursor:pointer;flex:none}
+.sw.on{border-color:var(--tx);box-shadow:0 0 0 2px var(--bg)}
+.bdg{background:var(--ac2);color:#fff;border-radius:10px;padding:0 7px;font-size:.75em;margin-left:6px}
+.sr{padding:8px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+.m.ment .bub{box-shadow:0 0 0 2px var(--ac2)}
+#csearch{width:100%;margin-bottom:8px}
+:root[data-theme="light"]{--bg:#f3f5ff;--card:#fff;--line:#dde2f5;--tx:#181c3a;--mut:#5a618c}
+:root[data-theme="light"] body{background:radial-gradient(900px 500px at 80% -10%,#dfe3ff,transparent),var(--bg)}
+:root[data-theme="light"] input,:root[data-theme="light"] select{background:#fff}
+:root[data-theme="light"] #side{background:#fff}
+:root[data-theme="light"] .card{background:rgba(255,255,255,.85)}
+:root[data-theme="light"] .other .bub{background:#fff}
+:root[data-theme="light"] .other .acts button{background:#eef0ff}
+:root[data-theme="light"] #top{background:rgba(255,255,255,.92)}
+:root[data-theme="light"] #toast,:root[data-theme="light"] #sug{background:#fff}
+:root[data-theme="light"] nav button.on,:root[data-theme="light"] nav button:hover{background:#eef0ff}
+:root[data-theme="light"] #landing h1{background:linear-gradient(135deg,#1a1f4d,var(--ac) 70%,var(--ac2));-webkit-background-clip:text;background-clip:text;color:transparent}
