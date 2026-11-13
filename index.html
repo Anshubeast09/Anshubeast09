@@ -37,33 +37,30 @@
 </section>
 
 <div id="app" class="hide">
+  <div id="scrim" class="hide"></div>
   <aside id="side">
     <div class="logo">AH</div>
+    <div id="chip" class="chip"></div>
     <nav>
       <button data-v="ov" class="on">Overview</button>
       <button data-v="chat">Group Chat</button>
       <button data-v="files">My Files</button>
       <button data-v="gal">Common Gallery</button>
       <button data-v="att">Attendance</button>
+      <button data-v="prof">Update Profile</button>
+      <button data-v="acct">Settings</button>
       <button data-v="mem" class="own">Members</button>
       <button data-v="set" class="own">Chat Settings</button>
     </nav>
     <button class="link inst hide">Install app</button>
     <button class="link" id="out">Sign out</button>
   </aside>
+  <header id="top"><button id="burger" class="btn alt">Menu</button><b>Aadarsh Hub</b><span id="topav"></span></header>
   <main>
-    <button id="burger">Menu</button>
 
     <section id="v-ov">
       <h2 id="hi"></h2>
       <div class="grid" id="stats"></div>
-      <form id="pwf" class="card narrow">
-        <h2>Change password</h2>
-        <input id="p0" type="password" placeholder="Current password" required autocomplete="current-password">
-        <input id="p1" type="password" placeholder="New password (min 8 characters)" minlength="8" required autocomplete="new-password">
-        <input id="p2" type="password" placeholder="Confirm new password" minlength="8" required autocomplete="new-password">
-        <button class="btn">Update password</button>
-      </form>
     </section>
 
     <section id="v-chat" class="hide">
@@ -101,6 +98,30 @@
         <button class="btn" id="asave">Mark</button>
       </div>
       <div id="alist" class="list"></div>
+    </section>
+
+    <section id="v-prof" class="hide">
+      <h2>Update profile</h2>
+      <form id="pf" class="card narrow">
+        <div class="row"><span id="pav"></span>
+          <label class="btn alt">Change photo<input id="paf" type="file" accept="image/*" hidden></label>
+          <button type="button" class="link" id="prm">Remove</button></div>
+        <label>Username (display name)<input id="pn" maxlength="40" required></label>
+        <label>Bio<input id="pb" maxlength="160" placeholder="A line about you"></label>
+        <small class="mut">Email: <span id="pe"></span></small>
+        <button class="btn">Save profile</button>
+      </form>
+    </section>
+
+    <section id="v-acct" class="hide">
+      <h2>Settings</h2>
+      <form id="pwf" class="card narrow">
+        <h2>Change password</h2>
+        <input id="p0" type="password" placeholder="Current password" required autocomplete="current-password">
+        <input id="p1" type="password" placeholder="New password (min 8 characters)" minlength="8" required autocomplete="new-password">
+        <input id="p2" type="password" placeholder="Confirm new password" minlength="8" required autocomplete="new-password">
+        <button class="btn">Update password</button>
+      </form>
     </section>
 
     <section id="v-mem" class="hide">
