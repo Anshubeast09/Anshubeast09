@@ -78,11 +78,13 @@
       <div class="row">
         <input id="ci" placeholder="Message (type @ to mention)" maxlength="4000">
         <label class="btn alt" title="Send photo or video directly">📷 Photo/Video<input id="cpv" type="file" accept="image/*,video/*" multiple hidden></label>
+        <label class="btn alt camb" title="Open camera">📸 Camera<input id="ccam" type="file" accept="image/*,video/*" capture="environment" hidden></label>
         <label class="btn alt" title="Attach a file">📎 File<input id="cf" type="file" hidden></label>
         <button class="btn alt" id="cmic" type="button" aria-label="Record voice note">🎤</button>
         <button class="btn" id="send">Send</button>
       </div>
       <small id="cfn" class="mut"></small>
+      <small class="mut deskhint">Tip: paste (Ctrl+V) or drag photos/videos into the chat to send them instantly.</small>
     </section>
 
     <section id="v-dm" class="hide">
@@ -130,6 +132,7 @@
     <section id="v-acct" class="hide">
       <h2>Settings</h2>
       <p class="mut">NEXORA <span class="ver"></span></p>
+      <button class="btn alt" id="out2" type="button">Sign out</button>
       <div class="tabs subtabs"><button type="button" class="on" data-p="sp-prof">Profile</button><button type="button" data-p="sp-look">Appearance</button><button type="button" data-p="sp-notif">Notifications</button><button type="button" data-p="sp-pw">Password</button></div>
       <div id="sp-prof"><form id="pf" class="card narrow">
         <div class="row"><span id="pav"></span>
