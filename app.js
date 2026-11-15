@@ -36,7 +36,14 @@ $("#lf").onsubmit = async e => {
   if (error) return toast(error.message);
   await boot(data.user, true);
 };
-$("#out").onclick = async () => { await pushDropDb().catch(() => {}); await db.auth.signOut(); location.reload(); };
+$("#out").onclick = doSignOut;
+async function doSignOut() {
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  try { await Promise.race([pushDropDb(), wait(1500)]); } catch (_) {}
+  try { await Promise.race([db.auth.signOut({ scope: "local" }), wait(3000)]); } catch (_) {}
+  try { Object.keys(localStorage).filter(k => k.startsWith("sb-")).forEach(k => localStorage.removeItem(k)); } catch (_) {}
+  location.reload();
+}
 
 async function boot(user, checkRole) {
   const { data: p, error } = await db.from("profiles").select("*").eq("id", user.id).single();
@@ -403,7 +410,7 @@ $("#pf").onsubmit = async e => {
 };
 
 // ---------- version ----------
-const APP_VERSION = "V.01.03";
+const APP_VERSION = "V.01.04";
 $$(".ver").forEach(e => e.textContent = APP_VERSION);
 
 // ---------- local preferences ----------
@@ -831,12 +838,33 @@ async function shrink(f) {
     return !b || b.size >= f.size ? f : new File([b], f.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" });
   } catch (_) { return f; }
 }
-$("#cpv").onchange = async e => {
-  const files = [...e.target.files]; e.target.value = ""; if (!files.length) return;
+let mq = Promise.resolve();
+const isMedia = f => /^(image|video)\//.test(f.type);
+async function doSendMedia(files) {
   for (let i = 0; i < files.length; i++) {
     $("#cfn").textContent = `Sending ${i + 1} of ${files.length}...`;
     const dt = new DataTransfer(); dt.items.add(await shrink(files[i])); $("#cf").files = dt.files;
     await sendMsg();
   }
   $("#cfn").textContent = "";
-};
+}
+const sendMedia = files => (mq = mq.then(() => doSendMedia(files)).catch(console.error));
+const pickMedia = e => { const f = [...e.target.files]; e.target.value = ""; if (f.length) sendMedia(f); };
+$("#cpv").onchange = pickMedia; $("#ccam").onchange = pickMedia;
+// paste (Ctrl+V) a screenshot/photo straight into the chat
+addEventListener("paste", e => {
+  if ($("#v-chat").classList.contains("hide") || !e.clipboardData) return;
+  const f = [...e.clipboardData.files].filter(isMedia); if (f.length) { e.preventDefault(); sendMedia(f); }
+});
+// drag & drop into the chat page
+const chatSec = $("#v-chat");
+["dragenter", "dragover"].forEach(ev => chatSec.addEventListener(ev, e => { e.preventDefault(); chatSec.classList.add("drop"); }));
+chatSec.addEventListener("dragleave", e => { if (!chatSec.contains(e.relatedTarget)) chatSec.classList.remove("drop"); });
+chatSec.addEventListener("drop", e => {
+  e.preventDefault(); chatSec.classList.remove("drop");
+  const all = [...e.dataTransfer.files], m = all.filter(isMedia);
+  if (m.length) sendMedia(m);
+  else if (all[0]) { const dt = new DataTransfer(); dt.items.add(all[0]); $("#cf").files = dt.files; $("#cfn").textContent = "Attached: " + all[0].name + " (tap here to remove)"; }
+});
+
+$("#out2").onclick = doSignOut;
