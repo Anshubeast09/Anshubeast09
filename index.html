@@ -50,6 +50,7 @@
       <button data-v="dm">Messages <span class="bdg hide" id="db"></span></button>
       <button data-v="files">My Files</button>
       <button data-v="gal">Common Gallery</button>
+      <button data-v="game">🎮 Game Zone</button>
       <button data-v="acct">Settings</button>
       <button data-v="own" class="own">Owner Settings</button>
     </nav>
@@ -103,6 +104,18 @@
           <small id="dmfn" class="mut"></small>
         </div>
       </div>
+    </section>
+
+    <section id="v-game" class="hide">
+      <h2>Game Zone</h2>
+      <div class="card gamecard">
+        <div class="gamehead"><b>Bhaag Prabhat Bhaag</b><small class="mut">Endless dodge runner</small></div>
+        <canvas id="gcv" aria-label="Bhaag Prabhat Bhaag game"></canvas>
+        <div class="gctl"><button class="btn alt" id="gdk" type="button">⬇ Duck (hold)</button><button class="btn" id="gjp" type="button">⬆ Jump</button></div>
+        <small class="mut">Tap / Space / Up = jump (Crocs ke saath hawa me dobara bhi). Down / Duck dabake rakho = jhuko. Power-ups: 🛵 Scooty = sab kuch todta hua tez daud, Jumping Crocs = oonchi jump + double jump, 🐱 Billi = do baar bachati hai.</small>
+      </div>
+      <div class="card"><h2>Leaderboard</h2><div id="glb"></div></div>
+      <small class="mut">Aur games jald aa rahe hain.</small>
     </section>
 
     <section id="v-files" class="hide">
@@ -191,4 +204,5 @@
   <button id="lbnx" class="lbb lbnav" type="button" aria-label="Next">›</button>
 </div>
 <script src="app.js"></script>
+<script src="game.js"></script>
 </body></html>
