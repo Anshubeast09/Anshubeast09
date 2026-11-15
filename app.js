@@ -79,7 +79,7 @@ $("#scrim").onclick = () => toggleSide(false);
 function go(v) {
   $$("nav button").forEach(b => b.classList.toggle("on", b.dataset.v === v));
   $$("main > section").forEach(s => s.classList.toggle("hide", s.id !== "v-" + v));
-  ({ ov: loadOverview, chat: loadChat, dm: loadDm, files: loadFiles, gal: loadGallery, att: loadAttendance, mem: loadMembers, set: loadSettings, prof: loadProfile, acct: () => { loadProfile(); notifUI(); applyTheme(); $("#snd").checked = soundOn(); }, own: () => { loadMembers(); loadSettings(); } })[v]();
+  ({ ov: loadOverview, chat: loadChat, dm: loadDm, game: loadGame, files: loadFiles, gal: loadGallery, att: loadAttendance, mem: loadMembers, set: loadSettings, prof: loadProfile, acct: () => { loadProfile(); notifUI(); applyTheme(); $("#snd").checked = soundOn(); }, own: () => { loadMembers(); loadSettings(); } })[v]();
 }
 
 // ---------- realtime ----------
@@ -410,7 +410,7 @@ $("#pf").onsubmit = async e => {
 };
 
 // ---------- version ----------
-const APP_VERSION = "V.01.04";
+const APP_VERSION = "V.02.00";
 $$(".ver").forEach(e => e.textContent = APP_VERSION);
 
 // ---------- local preferences ----------
