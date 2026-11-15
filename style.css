@@ -176,3 +176,9 @@ img.lbm.zoom{transform:scale(2.2);cursor:zoom-out}
 .lbtop{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:max(10px,env(safe-area-inset-top)) 14px 10px;color:#fff;z-index:2;background:linear-gradient(rgba(0,0,0,.6),transparent)}
 .lbb{background:rgba(255,255,255,.16);color:#fff;border:0;border-radius:50%;width:42px;height:42px;font-size:20px;cursor:pointer}
 .lbnav{position:absolute;top:50%;transform:translateY(-50%);z-index:2}#lbp{left:10px}#lbnx{right:10px}
+
+/* ---- v9 ---- */
+#v-chat.drop{outline:2px dashed var(--ac);outline-offset:6px;border-radius:12px}
+@media (hover:hover) and (pointer:fine){.camb{display:none}}
+@media (hover:none){.deskhint{display:none}}
+#side nav{min-height:0;overflow-y:auto}
