@@ -182,3 +182,11 @@ img.lbm.zoom{transform:scale(2.2);cursor:zoom-out}
 @media (hover:hover) and (pointer:fine){.camb{display:none}}
 @media (hover:none){.deskhint{display:none}}
 #side nav{min-height:0;overflow-y:auto}
+
+/* ---- v10: game zone ---- */
+.gamecard{max-width:720px}
+.gamehead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px}
+#gcv{width:100%;aspect-ratio:560/300;display:block;border-radius:12px;background:#12154a;touch-action:manipulation;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;cursor:pointer}
+.gctl{display:none;gap:10px;margin:10px 0}
+.gctl .btn{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+@media (hover:none){.gctl{display:flex}.gctl .btn{flex:1;padding:18px 10px;font-size:1.05em}}
