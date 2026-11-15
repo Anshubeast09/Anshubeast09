@@ -410,7 +410,7 @@ $("#pf").onsubmit = async e => {
 };
 
 // ---------- version ----------
-const APP_VERSION = "V.02.00";
+const APP_VERSION = "V.02.01";
 $$(".ver").forEach(e => e.textContent = APP_VERSION);
 
 // ---------- local preferences ----------
