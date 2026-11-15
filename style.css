@@ -190,3 +190,12 @@ img.lbm.zoom{transform:scale(2.2);cursor:zoom-out}
 .gctl{display:none;gap:10px;margin:10px 0}
 .gctl .btn{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 @media (hover:none){.gctl{display:flex}.gctl .btn{flex:1;padding:18px 10px;font-size:1.05em}}
+
+/* ---- v11: full-screen 3-lane game ---- */
+#gcv{aspect-ratio:16/9;max-width:100%}
+.gplay{width:100%;margin:10px 0;padding:14px;font-size:1.05em}
+#gplay{position:fixed;inset:0;z-index:200;background:#0a0d1c;display:flex}
+#gcv2{width:100%;height:100%;display:block;touch-action:none;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
+.gbtn{position:absolute;top:max(12px,env(safe-area-inset-top));width:46px;height:46px;border-radius:50%;border:0;background:rgba(8,10,35,.72);color:#fff;font-size:18px;cursor:pointer;z-index:2}
+#gx{right:max(12px,env(safe-area-inset-right))}
+#gps{right:calc(max(12px,env(safe-area-inset-right)) + 56px)}
