@@ -18,8 +18,8 @@ const size = b => b > MB ? (b / MB).toFixed(1) + " MB" : Math.ceil(b / 1024) + "
 function media(url, mime, name) {
   if (!url) return "";
   mime = mime || "";
-  if (mime.startsWith("image/")) return `<img src="${url}" alt="${esc(name)}" loading="lazy">`;
-  if (mime.startsWith("video/")) return `<video src="${url}" controls preload="metadata"></video>`;
+  if (mime.startsWith("image/")) return `<img data-lb src="${url}" alt="${esc(name)}" loading="lazy">`;
+  if (mime.startsWith("video/")) return `<div class="vw"><video data-n="${esc(name)}" src="${url}" controls preload="metadata" playsinline></video><button type="button" class="vz" data-lbv aria-label="Open full screen">⤢</button></div>`;
   if (mime.startsWith("audio/")) return `<audio src="${url}" controls></audio>`;
   return `<a href="${url}" target="_blank" rel="noopener">${esc(name)}</a>`;
 }
@@ -140,7 +140,7 @@ async function drawChat(keepScroll) {
   box.innerHTML = m.length ? m.map(x => {
     const q = x.reply_to_id && msgCache[x.reply_to_id] ? `<div class="q">${esc(nm(msgCache[x.reply_to_id].sender_id))}: ${esc(msgCache[x.reply_to_id].content.slice(0, 80))}</div>` : "";
     const files = atts.filter(a => a.message_id === x.id).map(a => media(urls[a.id], a.mime_type, a.file_name)).join("");
-    const text = x.message_type !== "text" && files ? "" : esc(x.content);
+    const text = x.message_type !== "text" && files && /^(📎|🎤) /.test(x.content) ? "" : esc(x.content);
     const rb = EMOJI.map(em => {
       const list = rx.filter(r => r.message_id === x.id && r.emoji === em), mine = list.some(r => r.user_id === me.id);
       return `<button data-a="rx" data-id="${x.id}" data-e="${em}" class="${mine ? "me" : ""}">${em} ${list.length || ""}</button>`;
@@ -403,7 +403,7 @@ $("#pf").onsubmit = async e => {
 };
 
 // ---------- version ----------
-const APP_VERSION = "V.01.02";
+const APP_VERSION = "V.01.03";
 $$(".ver").forEach(e => e.textContent = APP_VERSION);
 
 // ---------- local preferences ----------
@@ -776,3 +776,67 @@ function startDmRealtime() {
     if (open) { loadDm(); drawDm(true); }
   }).subscribe();
 }
+
+// ---------- full-screen media viewer ----------
+const LB = { items: [], i: 0, zoom: false };
+function lbOpen(box, el) {
+  const els = [...box.querySelectorAll("img[data-lb], .vw video")];
+  LB.items = els.map(x => ({ v: x.tagName === "VIDEO", src: x.currentSrc || x.src, name: x.dataset.n || x.alt || "file" }));
+  LB.i = Math.max(0, els.indexOf(el));
+  $("#lb").classList.remove("hide"); document.body.style.overflow = "hidden"; lbShow(0);
+}
+function lbShow(dir) {
+  const it = LB.items[LB.i], an = dir > 0 ? "sr" : dir < 0 ? "sl" : ""; LB.zoom = false;
+  $("#lbn").textContent = `${LB.i + 1} / ${LB.items.length}`;
+  $("#lbs").innerHTML = it.v ? `<video class="lbm ${an}" src="${esc(it.src)}" controls autoplay playsinline></video>` : `<img class="lbm ${an}" src="${esc(it.src)}" alt="${esc(it.name)}" draggable="false">`;
+  $("#lbp").classList.toggle("hide", LB.i === 0); $("#lbnx").classList.toggle("hide", LB.i === LB.items.length - 1);
+}
+const lbGo = d => { const n = LB.i + d; if (n >= 0 && n < LB.items.length) { LB.i = n; lbShow(d); } };
+function lbClose() { $("#lb").classList.add("hide"); $("#lbs").innerHTML = ""; document.body.style.overflow = ""; }
+async function lbSave() {
+  const it = LB.items[LB.i];
+  try { const b = await (await fetch(it.src)).blob(), a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = it.name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000); }
+  catch (_) { window.open(it.src, "_blank"); }
+}
+document.addEventListener("click", e => {
+  const box = e.target.closest("#msgs,#dmmsgs,#glist"); if (!box) return;
+  const img = e.target.closest("img[data-lb]"), vz = e.target.closest("[data-lbv]");
+  if (img) lbOpen(box, img); else if (vz) lbOpen(box, vz.parentElement.querySelector("video"));
+});
+let lbx = 0, lby = 0;
+$("#lbs").addEventListener("pointerdown", e => { lbx = e.clientX; lby = e.clientY; });
+$("#lbs").addEventListener("pointerup", e => {
+  const dx = e.clientX - lbx, dy = e.clientY - lby;
+  if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5 && !LB.zoom) return lbGo(dx < 0 ? 1 : -1);
+  if (Math.abs(dx) < 8 && Math.abs(dy) < 8) {
+    const im = e.target.closest("img.lbm");
+    if (im) { LB.zoom = !LB.zoom; const q = im.getBoundingClientRect(); im.style.transformOrigin = `${(e.clientX - q.left) / q.width * 100}% ${(e.clientY - q.top) / q.height * 100}%`; im.classList.toggle("zoom", LB.zoom); }
+    else if (!e.target.closest("video")) lbClose();
+  }
+});
+$("#lbx").onclick = lbClose; $("#lbp").onclick = () => lbGo(-1); $("#lbnx").onclick = () => lbGo(1); $("#lbdl").onclick = lbSave;
+addEventListener("keydown", e => {
+  if ($("#lb").classList.contains("hide")) return;
+  if (e.key === "Escape") lbClose(); else if (e.key === "ArrowRight") lbGo(1); else if (e.key === "ArrowLeft") lbGo(-1);
+});
+
+// ---------- direct photo/video send ----------
+async function shrink(f) {
+  if (!/^image\/(jpeg|png|webp)$/.test(f.type) || f.size < 600 * 1024) return f;
+  try {
+    const bmp = await createImageBitmap(f), k = Math.min(1, 1920 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement("canvas"); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+    const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(bmp, 0, 0, c.width, c.height);
+    const b = await new Promise(ok => c.toBlob(ok, "image/jpeg", 0.85));
+    return !b || b.size >= f.size ? f : new File([b], f.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" });
+  } catch (_) { return f; }
+}
+$("#cpv").onchange = async e => {
+  const files = [...e.target.files]; e.target.value = ""; if (!files.length) return;
+  for (let i = 0; i < files.length; i++) {
+    $("#cfn").textContent = `Sending ${i + 1} of ${files.length}...`;
+    const dt = new DataTransfer(); dt.items.add(await shrink(files[i])); $("#cf").files = dt.files;
+    await sendMsg();
+  }
+  $("#cfn").textContent = "";
+};
