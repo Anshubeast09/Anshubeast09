@@ -199,3 +199,25 @@ img.lbm.zoom{transform:scale(2.2);cursor:zoom-out}
 .gbtn{position:absolute;top:max(12px,env(safe-area-inset-top));width:46px;height:46px;border-radius:50%;border:0;background:rgba(8,10,35,.72);color:#fff;font-size:18px;cursor:pointer;z-index:2}
 #gx{right:max(12px,env(safe-area-inset-right))}
 #gps{right:calc(max(12px,env(safe-area-inset-right)) + 56px)}
+
+/* ---- v12: game tiles, nail studio, nails overlay ---- */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-bottom:12px}
+.tile{padding:0;overflow:hidden;margin:0}
+.tile canvas{width:100%;aspect-ratio:16/9;display:block;cursor:pointer;border-radius:0;max-width:100%}
+.tbody{padding:12px;display:flex;flex-direction:column;gap:6px}
+.tbody .gplay{margin:4px 0}
+.gtile{display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 10px;border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--tx);cursor:pointer;font:inherit;transition:transform .15s,border-color .15s}
+.gtile:hover{transform:translateY(-2px);border-color:var(--ac)}
+.gtile .gico{font-size:2rem}
+.gt{margin-bottom:0}
+.nhead{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+#nprev{width:200px;height:175px;max-width:100%}
+.nrow{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 14px}
+.nitem{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px;border:2px solid var(--line);border-radius:12px;background:var(--card);color:var(--tx);cursor:pointer;font:inherit;min-width:78px}
+.nitem canvas{width:44px;height:66px}
+.nitem.on{border-color:var(--ac);box-shadow:0 0 0 2px var(--ac)}
+.nitem.locked{opacity:.88}.nitem .pr{color:var(--mut)}
+#nplay{position:fixed;inset:0;z-index:200;background:#0a0d1c;display:flex}
+#ncv{width:100%;height:100%;display:block;touch-action:none;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
+#nx{right:max(12px,env(safe-area-inset-right))}
+#nps{right:calc(max(12px,env(safe-area-inset-right)) + 56px)}
