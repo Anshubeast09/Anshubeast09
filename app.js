@@ -53,3 +53,247 @@ async function boot(user, checkRole) {
   me = p;
   applyTheme();
   $$(".own").forEach(x => x.classList.toggle("hide", me.role !== "owner"));
+  $("#gup").classList.toggle("hide", !can("upload_gallery"));
+  page("app");
+  await loadPeople();
+  paintMe();
+  paintStorage();
+  go("ov");
+  startRealtime();
+  initUnread();
+  initDm(); startDmRealtime();
+  if (notifOn() && "PushManager" in window) pushOn().catch(console.error);
+}
+(async () => { const { data } = await db.auth.getSession(); if (data.session) boot(data.session.user, false); })();
+
+async function loadPeople() {
+  let q = await db.from("profiles").select("id,display_name,role,is_enabled,avatar_url,bio");
+  if (q.error) q = await db.from("profiles").select("id,display_name,role,is_enabled");
+  const d = must(q);
+  people = {}; d.forEach(p => people[p.id] = p);
+}
+
+$$("nav button").forEach(b => b.onclick = () => { go(b.dataset.v); toggleSide(false); });
+$("#burger").onclick = () => toggleSide();
+$("#scrim").onclick = () => toggleSide(false);
+function go(v) {
+  $$("nav button").forEach(b => b.classList.toggle("on", b.dataset.v === v));
+  $$("main > section").forEach(s => s.classList.toggle("hide", s.id !== "v-" + v));
+  ({ ov: loadOverview, chat: loadChat, dm: loadDm, game: () => { loadGame(); loadNails(); }, files: loadFiles, gal: loadGallery, att: loadAttendance, mem: loadMembers, set: loadSettings, prof: loadProfile, acct: () => { loadProfile(); notifUI(); applyTheme(); $("#snd").checked = soundOn(); }, own: () => { loadMembers(); loadSettings(); } })[v]();
+}
+
+// ---------- realtime ----------
+let rt = null;
+function startRealtime() {
+  const pr = db.channel("hub-presence", { config: { presence: { key: me.id } } });
+  pr.on("presence", { event: "sync" }, () => { onlineIds = new Set(Object.keys(pr.presenceState())); online = onlineIds.size; if (!$("#v-ov").classList.contains("hide")) paintMembers(); })
+    .subscribe(s => { if (s === "SUBSCRIBED") pr.track({ name: me.display_name, at: Date.now() }); });
+  const ch = db.channel("hub-messages");
+  ["messages", "chat_reactions", "chat_attachments"].forEach(t =>
+    ch.on("postgres_changes", { event: "*", schema: "public", table: t }, () => {
+      clearTimeout(rt); rt = setTimeout(() => { if (!$("#v-chat").classList.contains("hide")) loadChat(true); }, 120);
+    }));
+  ch.on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, p => onNewMsg(p.new));
+  ch.subscribe();
+}
+
+// ---------- overview ----------
+function setStorage(used) {
+  const lim = me.storage_limit_bytes || 0, pct = lim ? Math.min(100, used / lim * 100) : 0;
+  $("#stor").innerHTML = `<div class="row"><small>Storage</small><small>${size(used)} of ${size(lim)}</small></div><div class="bar"><i style="width:${pct}%"></i></div>`;
+}
+async function paintStorage() { setStorage(await usedBytes()); }
+function paintMembers() {
+  const list = Object.values(people).filter(p => p.is_enabled).sort((a, b) => (onlineIds.has(b.id) - onlineIds.has(a.id)) || a.display_name.localeCompare(b.display_name));
+  $("#mcount").textContent = `${list.length} members · ${onlineIds.size} online`;
+  $("#mlist2").innerHTML = list.map(p => `<div class="mem">${av(p, 38)}<div><b>${esc(p.display_name)}${p.id === me.id ? " (you)" : ""}</b><small class="mut">${p.role === "owner" ? "Owner" : "Member"}${p.bio ? " · " + esc(p.bio) : ""}</small></div><span class="dot ${onlineIds.has(p.id) ? "on" : ""}" title="${onlineIds.has(p.id) ? "Online" : "Offline"}"></span></div>`).join("");
+}
+async function loadOverview() {
+  $("#hi").textContent = `Welcome, ${nm(me.id)}`;
+  await loadPeople(); paintMembers(); paintStorage();
+  if (!can("chat")) { $("#cprev").textContent = "You do not have chat access."; return; }
+  const q = await db.from("messages").select("sender_id,content").order("created_at", { ascending: false }).limit(1);
+  const m = q.data && q.data[0];
+  $("#cprev").innerHTML = m ? `<b>${esc(nm(m.sender_id))}:</b> ${esc(m.content.slice(0, 90))}` : "No messages yet.";
+}
+
+// ---------- chat ----------
+async function loadChat(keepScroll) {
+  if (searching) { if (keepScroll) return; searching = false; $("#csearch").value = ""; }
+  if (busy) { again = true; return; }
+  busy = true;
+  try { await drawChat(keepScroll); } finally { busy = false; if (again) { again = false; loadChat(true); } }
+}
+async function drawChat(keepScroll) {
+  const box = $("#msgs");
+  if (!can("chat")) { box.innerHTML = `<p class="mut">You do not have chat access.</p>`; return; }
+  const stick = !keepScroll || box.scrollTop + box.clientHeight >= box.scrollHeight - 40;
+  const m = must(await db.from("messages").select("*").order("created_at", { ascending: false }).limit(100)).reverse();
+  const ids = m.map(x => x.id);
+  let atts = [], rx = [];
+  if (ids.length) {
+    [rx, atts] = await Promise.all([
+      db.from("chat_reactions").select("*").in("message_id", ids).then(r => r.data || []),
+      db.from("chat_attachments").select("*").in("message_id", ids).then(r => r.data || [])
+    ]);
+  }
+  rxCache = rx; msgCache = {}; m.forEach(x => msgCache[x.id] = x);
+  const need = atts.filter(a => !(urlCache[a.object_path] && urlCache[a.object_path].exp > Date.now()));
+  if (need.length) {
+    const sg = await db.storage.from("chat-attachments").createSignedUrls(need.map(a => a.object_path), 3600);
+    (sg.data || []).forEach(u => { if (u.signedUrl) urlCache[u.path] = { url: u.signedUrl, exp: Date.now() + 3300000 }; });
+  }
+  const urls = {}; atts.forEach(a => { const c = urlCache[a.object_path]; urls[a.id] = c && c.url; });
+  box.innerHTML = m.length ? m.map(x => {
+    const q = x.reply_to_id && msgCache[x.reply_to_id] ? `<div class="q">${esc(nm(msgCache[x.reply_to_id].sender_id))}: ${esc(msgCache[x.reply_to_id].content.slice(0, 80))}</div>` : "";
+    const files = atts.filter(a => a.message_id === x.id).map(a => media(urls[a.id], a.mime_type, a.file_name)).join("");
+    const text = x.message_type !== "text" && files && /^(📎|🎤) /.test(x.content) ? "" : esc(x.content);
+    const rb = EMOJI.map(em => {
+      const list = rx.filter(r => r.message_id === x.id && r.emoji === em), mine = list.some(r => r.user_id === me.id);
+      return `<button data-a="rx" data-id="${x.id}" data-e="${em}" class="${mine ? "me" : ""}">${em} ${list.length || ""}</button>`;
+    }).join("");
+    const canPin = x.sender_id === me.id || me.role === "owner";
+    const mine = x.sender_id === me.id;
+    return `<div class="m ${mine ? "mine" : "other"} ${x.is_pinned ? "pin" : ""} ${!mine && mentionsMe(x.content) ? "ment" : ""}">${mine ? "" : av(people[x.sender_id], 34)}<div class="bub">${x.is_pinned ? "📌 " : ""}<b>${mine ? "You" : esc(nm(x.sender_id))}</b><small>${new Date(x.created_at).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}</small>${q}<div>${text}${x.edited_at ? " <small>(edited)</small>" : ""}</div>${files}
+      <div class="acts">${rb}<button data-a="reply" data-id="${x.id}">Reply</button>${canPin ? `<button data-a="pin" data-id="${x.id}" data-p="${x.is_pinned ? 1 : 0}">${x.is_pinned ? "Unpin" : "Pin"}</button>` : ""}${mine && x.message_type === "text" ? `<button data-a="edit" data-id="${x.id}">Edit</button>` : ""}${mine || me.role === "owner" ? `<button data-a="del" data-id="${x.id}">Delete</button>` : ""}</div></div></div>`;
+  }).join("") : `<p class="mut">No messages yet. Say hello.</p>`;
+  if (stick) box.scrollTop = box.scrollHeight;
+  if (!document.hidden) markSeen();
+}
+
+$("#msgs").onclick = async e => {
+  const b = e.target.closest("[data-a]"); if (!b) return;
+  const id = +b.dataset.id, a = b.dataset.a;
+  if (a === "edit") return editMsg(id);
+  if (a === "del") return delMsg(id);
+  if (a === "reply") { replyTo = id; const r = $("#rp"); r.textContent = "Replying to " + nm(msgCache[id].sender_id) + " (click to cancel)"; r.classList.remove("hide"); $("#ci").focus(); }
+  if (a === "pin") {
+    const on = b.dataset.p === "0";
+    must(await db.from("messages").update({ is_pinned: on, pinned_at: on ? new Date().toISOString() : null, pinned_by: on ? me.id : null }).eq("id", id).select().single());
+    loadChat(true);
+  }
+  if (a === "rx") {
+    const ex = rxCache.find(r => r.message_id === id && r.user_id === me.id && r.emoji === b.dataset.e);
+    if (ex) must(await db.from("chat_reactions").delete().eq("id", ex.id).select());
+    else must(await db.from("chat_reactions").insert({ message_id: id, user_id: me.id, emoji: b.dataset.e }).select());
+    loadChat(true);
+  }
+};
+$("#rp").onclick = () => { replyTo = null; $("#rp").classList.add("hide"); };
+$("#cf").onchange = () => { const f = $("#cf").files[0]; $("#cfn").textContent = f ? "Attached: " + f.name : ""; };
+
+$("#ci").oninput = () => {
+  const m = $("#ci").value.match(/@(\w*)$/), box = $("#sug");
+  if (!m) return box.classList.add("hide");
+  const q = m[1].toLowerCase();
+  const hits = Object.values(people).filter(p => p.is_enabled && p.display_name.replace(/\s+/g, "").toLowerCase().startsWith(q)).slice(0, 5);
+  box.innerHTML = hits.map(p => `<div data-n="${esc(p.display_name.replace(/\s+/g, ""))}">@${esc(p.display_name)}</div>`).join("");
+  box.classList.toggle("hide", !hits.length);
+};
+$("#sug").onclick = e => {
+  const d = e.target.closest("[data-n]"); if (!d) return;
+  $("#ci").value = $("#ci").value.replace(/@\w*$/, "@" + d.dataset.n + " "); $("#sug").classList.add("hide"); $("#ci").focus();
+};
+$("#ci").onkeydown = e => { if (e.key === "Enter") sendMsg(); };
+$("#send").onclick = sendMsg;
+
+async function sendMsg() {
+  const text = $("#ci").value.trim(), file = $("#cf").files[0];
+  if (!text && !file) return;
+  if (file && file.size > 50 * MB) return toast("Attachment must be 50 MB or smaller.");
+  const type = !file ? "text" : file.type === "image/gif" ? "gif" : file.type.startsWith("image/") ? "image" : "file";
+  $("#send").disabled = true;
+  try {
+    const row = must(await db.from("messages").insert({ sender_id: me.id, content: (text || (file.name.startsWith("voice-note") ? "🎤 Voice note" : "📎 " + file.name)).slice(0, 4000), message_type: type, reply_to_id: replyTo }).select().single());
+    $("#ci").value = ""; replyTo = null; $("#rp").classList.add("hide"); loadChat(); sndSend();
+    if (file) {
+      const path = `${me.id}/${Date.now()}-${safe(file.name)}`;
+      must(await db.storage.from("chat-attachments").upload(path, file, { contentType: file.type || "application/octet-stream" }));
+      must(await db.from("chat_attachments").insert({ message_id: row.id, uploader_id: me.id, bucket_id: "chat-attachments", object_path: path, file_name: file.name, mime_type: file.type || "application/octet-stream", file_size: file.size }).select());
+    }
+    const ment = Object.values(people).filter(p => p.id !== me.id && text.toLowerCase().includes("@" + p.display_name.replace(/\s+/g, "").toLowerCase()));
+    if (ment.length) await db.from("chat_mentions").insert(ment.map(p => ({ message_id: row.id, mentioned_user_id: p.id })));
+    $("#ci").value = ""; $("#cf").value = ""; $("#cfn").textContent = ""; replyTo = null; $("#rp").classList.add("hide");
+    loadChat();
+  } finally { $("#send").disabled = false; }
+}
+
+// ---------- personal files ----------
+async function listFolder(bucket, uid) {
+  const r = await db.storage.from(bucket).list(uid, { limit: 100, sortBy: { column: "created_at", order: "desc" } });
+  if (r.error) { toast(r.error.message); return []; }
+  return r.data.filter(f => f.id);
+}
+async function usedBytes() { return (await listFolder("member-files", me.id)).reduce((s, f) => s + ((f.metadata && f.metadata.size) || 0), 0); }
+
+async function loadFiles() {
+  const l = await listFolder("member-files", me.id);
+  const used = l.reduce((s, f) => s + ((f.metadata && f.metadata.size) || 0), 0);
+  $("#quota").textContent = `Using ${size(used)} of ${size(me.storage_limit_bytes || 0)}`;
+  setStorage(used);
+  $("#flist").innerHTML = l.length ? l.map(f => `<div><span>${esc(f.name.replace(/^\d+-/, ""))} <small class="mut">${size(f.metadata.size || 0)}</small></span>
+    <span><button class="btn alt" data-o="${esc(f.name)}">Open</button> <button class="btn alt" data-d="${esc(f.name)}">Delete</button></span></div>`).join("") : `<p class="mut">No files yet. Upload your first one.</p>`;
+}
+$("#flist").onclick = async e => {
+  const o = e.target.dataset.o, d = e.target.dataset.d;
+  if (o) { const s = must(await db.storage.from("member-files").createSignedUrl(`${me.id}/${o}`, 60)); window.open(s.signedUrl, "_blank"); }
+  if (d && confirm("Delete this file?")) { must(await db.storage.from("member-files").remove([`${me.id}/${d}`])); loadFiles(); }
+};
+$("#mf").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  if (!can("upload_files")) return toast("You do not have upload permission.");
+  const used = await usedBytes();
+  if (used + f.size > (me.storage_limit_bytes || 0)) { e.target.value = ""; return toast("Storage allowance exceeded."); }
+  must(await db.storage.from("member-files").upload(`${me.id}/${Date.now()}-${safe(f.name)}`, f));
+  e.target.value = ""; toast("Uploaded."); loadFiles();
+};
+
+// ---------- gallery ----------
+async function loadGallery() {
+  const box = $("#glist");
+  if (!can("view_gallery")) { box.innerHTML = `<p class="mut">You do not have gallery access.</p>`; return; }
+  const out = [];
+  for (const p of Object.values(people).filter(p => p.is_enabled)) {
+    const l = await listFolder("common-gallery", p.id); if (!l.length) continue;
+    const s = await db.storage.from("common-gallery").createSignedUrls(l.map(f => `${p.id}/${f.name}`), 3600);
+    (s.data || []).forEach((u, i) => out.push({ uid: p.id, name: l[i].name, url: u.signedUrl, mime: (l[i].metadata && l[i].metadata.mimetype) || "" }));
+  }
+  box.innerHTML = out.length ? out.map(f => `<div class="card g">${media(f.url, f.mime, f.name.replace(/^\d+-/, ""))}<small class="mut">${esc(nm(f.uid))}</small>
+    ${f.uid === me.id || me.role === "owner" ? `<button class="btn alt" data-p="${f.uid}/${esc(f.name)}">Delete</button>` : ""}</div>`).join("") : `<p class="mut">The gallery is empty.</p>`;
+}
+$("#glist").onclick = async e => {
+  const p = e.target.dataset.p;
+  if (p && confirm("Delete this file?")) { must(await db.storage.from("common-gallery").remove([p])); loadGallery(); }
+};
+$("#gf").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  if (!can("upload_gallery")) return toast("You do not have gallery upload permission.");
+  must(await db.storage.from("common-gallery").upload(`${me.id}/${Date.now()}-${safe(f.name)}`, f));
+  e.target.value = ""; toast("Uploaded."); loadGallery();
+};
+
+// ---------- attendance ----------
+const today = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+async function loadAttendance() {
+  $("#today").textContent = "Today (India): " + today();
+  const d = must(await db.from("attendance").select("*").order("attendance_date", { ascending: false }).limit(100));
+  const mine = d.find(x => x.member_id === me.id && x.attendance_date === today());
+  if (mine) { $("#as").value = mine.status; $("#an").value = mine.note || ""; }
+  $("#alist").innerHTML = d.length ? d.map(x => `<div><span><b>${esc(nm(x.member_id))}</b> <small class="mut">${x.attendance_date}</small></span><span>${esc(x.status)}${x.note ? " · " + esc(x.note) : ""}</span></div>`).join("") : `<p class="mut">No attendance marked yet.</p>`;
+}
+$("#asave").onclick = async () => {
+  must(await db.from("attendance").upsert({ member_id: me.id, attendance_date: today(), status: $("#as").value, note: $("#an").value.trim() || null, updated_at: new Date().toISOString() }, { onConflict: "member_id,attendance_date" }).select());
+  toast("Attendance saved."); loadAttendance();
+};
+
+// ---------- owner: members ----------
+async function loadMembers() {
+  const d = must(await db.from("profiles").select("*").order("created_at"));
+  $("#mlist").innerHTML = d.map(p => `<div class="card mrow" data-id="${p.id}"><b>${esc(p.display_name)}</b><small class="mut">${p.role}</small>
+    <label><input type="checkbox" class="en" ${p.is_enabled ? "checked" : ""}> enabled</label>
+    ${PERMS.map(k => `<label><input type="checkbox" data-k="${k}" ${p.permissions && p.permissions[k] ? "checked" : ""}> ${k}</label>`).join("")}
+    <label>MB <input type="number" class="q" min="0" max="5120" value="${Math.round((p.storage_limit_bytes || 0) / MB)}"></label>
+    <button class="btn" data-x="save">Save</button><button class="btn alt" data-x="edit">Edit</button>${p.role !== "owner" ? '<button class="btn alt" data-x="del">Delete</button>' : ""}</div>`).join("");
+}
+$("#mlist").onclick = async e => {
+  if (e.target.tagName !== "BUTT
