@@ -195,7 +195,7 @@
       if (state !== "ready") hud();
       if (flash > 0) { g.fillStyle = "rgba(255,255,255," + flash * .6 + ")"; g.fillRect(-20, -20, W + 40, H + 40); }
     }
-    if (state === "ready") overlay("Nail Ninja", "Swipe to slice fruit. Avoid the bombs!", "Don't let fruit fall: 3 lives. Coins unlock nail styles.", "Tap to start");
+    if (state === "ready") overlay("Daksha: The Nail Ninja", "Swipe to slice fruit. Avoid the bombs!", "Don't let fruit fall: 3 lives. Coins unlock nail styles.", "Tap to start");
     if (state === "over") overlay("Game over!", "Score " + score + "   Coins +" + runCoins + "   Best " + best, "Spend coins in Game Zone > Nail Studio", "Tap to play again");
     if (state === "paused") overlay("Paused", "Game roka gaya hai.", "Wapas aane ke liye tap karo.", "Tap to continue");
     g.restore();
